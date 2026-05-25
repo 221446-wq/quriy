@@ -1,77 +1,63 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import clienteHttp from "../services/api";
 
-const EMOJIS_SITIO = ["🏛️", "⛩️", "🗿", "🏺", "🌄", "🪆"];
-const COLORES_CARD = [
-  { fondo: "#d4f5e2", accent: "#2e8b57" },
-  { fondo: "#fef9c3", accent: "#b59a00" },
-  { fondo: "#f0f0f0", accent: "#888" },
-  { fondo: "#dbeafe", accent: "#2563eb" },
-  { fondo: "#fce7f3", accent: "#be185d" },
-];
-
-function SitiosPage() {
-  const [sitios, setSitios] = useState([]);
+function ZonasPage() {
+  const { idSitio } = useParams();
+  const navegar = useNavigate();
+  const [zonas, setZonas] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
-  const [sitioSeleccionado, setSitioSeleccionado] = useState(null);
-  const [zonas, setZonas] = useState([]);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
-  const [nuevoSitio, setNuevoSitio] = useState({
+  const [nuevaZona, setNuevaZona] = useState({
     nombre: "",
-    ubicacion: "",
     descripcion: "",
+    latitud: "",
+    longitud: "",
   });
-  const navegar = useNavigate();
+  const [qrGenerado, setQrGenerado] = useState({});
 
   useEffect(() => {
     let activo = true;
-    const cargarSitios = async () => {
+    const cargarZonas = async () => {
       setCargando(true);
       try {
-        const respuesta = await clienteHttp.get("/sitios");
-        if (activo) {
-          setSitios(respuesta.data);
-          if (respuesta.data.length > 0) {
-            setSitioSeleccionado(respuesta.data[0]);
-          }
-        }
+        const respuesta = await clienteHttp.get(`/sitios/${idSitio}/zonas`);
+        if (activo) setZonas(respuesta.data);
       } catch {
-        if (activo) setError("No se pudieron cargar los sitios.");
+        if (activo) setError("No se pudieron cargar las zonas.");
       } finally {
         if (activo) setCargando(false);
       }
     };
-    cargarSitios();
-    return () => { activo = false; };
-  }, []);
-
-  useEffect(() => {
-    if (!sitioSeleccionado) return;
-    let activo = true;
-    const cargarZonas = async () => {
-      try {
-        const respuesta = await clienteHttp.get(
-          `/sitios/${sitioSeleccionado.id}/zonas`
-        );
-        if (activo) setZonas(respuesta.data);
-      } catch {
-        if (activo) setZonas([]);
-      }
-    };
     cargarZonas();
     return () => { activo = false; };
-  }, [sitioSeleccionado]);
+  }, [idSitio]);
 
-  const crearSitio = async () => {
+  const crearZona = async () => {
     try {
-      await clienteHttp.post("/sitios", nuevoSitio);
+      await clienteHttp.post(`/sitios/${idSitio}/zonas`, {
+        ...nuevaZona,
+        latitud: parseFloat(nuevaZona.latitud),
+        longitud: parseFloat(nuevaZona.longitud),
+      });
       setMostrarFormulario(false);
-      setNuevoSitio({ nombre: "", ubicacion: "", descripcion: "" });
+      setNuevaZona({ nombre: "", descripcion: "", latitud: "", longitud: "" });
       window.location.reload();
     } catch {
-      setError("No se pudo crear el sitio.");
+      setError("No se pudo crear la zona.");
+    }
+  };
+
+  const generarCodigoQR = async (idZona) => {
+    try {
+      const respuesta = await clienteHttp.post(`/zonas/${idZona}/qr`);
+      setQrGenerado((prev) => ({
+        ...prev,
+        [idZona]: respuesta.data.imagen_qr,
+      }));
+    } catch {
+      setError("No se pudo generar el QR.");
     }
   };
 
@@ -81,12 +67,12 @@ function SitiosPage() {
   };
 
   const menuItems = [
-    { icono: "⊞", label: "Dashboard", ruta: null },
-    { icono: "🏛️", label: "Sitios y Zonas", ruta: null, activo: true },
-    { icono: "🎧", label: "Contenido", ruta: null },
-    { icono: "⬛", label: "Códigos QR", ruta: null },
-    { icono: "📊", label: "Estadísticas", ruta: null },
-    { icono: "⭐", label: "Valoraciones", ruta: null },
+    { icono: "⊞", label: "Dashboard" },
+    { icono: "🏛️", label: "Sitios y Zonas", activo: true },
+    { icono: "🎧", label: "Contenido" },
+    { icono: "⬛", label: "Códigos QR" },
+    { icono: "📊", label: "Estadísticas" },
+    { icono: "⭐", label: "Valoraciones" },
   ];
 
   return (
@@ -106,6 +92,7 @@ function SitiosPage() {
               ...estilos.menuItem,
               ...(item.activo ? estilos.menuItemActivo : {}),
             }}
+            onClick={item.label === "Sitios y Zonas" ? () => navegar("/sitios") : undefined}
           >
             <span>{item.icono}</span>
             <span>{item.label}</span>
@@ -129,13 +116,21 @@ function SitiosPage() {
       <main style={estilos.main}>
         {/* Header */}
         <div style={estilos.header}>
-          <h1 style={estilos.tituloPagina}>Sitios y Zonas</h1>
+          <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+            <button
+              style={estilos.botonVolver}
+              onClick={() => navegar("/sitios")}
+            >
+              ← Volver
+            </button>
+            <h1 style={estilos.tituloPagina}>Zonas del Sitio</h1>
+          </div>
           <div style={estilos.headerDerecha}>
             <button
               style={estilos.botonNuevo}
               onClick={() => setMostrarFormulario(true)}
             >
-              + Nuevo sitio
+              + Nueva Zona
             </button>
             <div style={estilos.avatar}>AM</div>
           </div>
@@ -147,36 +142,45 @@ function SitiosPage() {
         {mostrarFormulario && (
           <div style={estilos.modalOverlay}>
             <div style={estilos.modal}>
-              <h3 style={{ marginTop: 0, color: "#1a6645" }}>Nuevo Sitio</h3>
+              <h3 style={{ marginTop: 0, color: "#1a6645" }}>Nueva Zona</h3>
               <label style={estilos.label}>Nombre</label>
               <input
                 style={estilos.input}
-                placeholder="Ej. Ollantaytambo"
-                value={nuevoSitio.nombre}
+                placeholder="Ej. Templo del Sol"
+                value={nuevaZona.nombre}
                 onChange={(e) =>
-                  setNuevoSitio({ ...nuevoSitio, nombre: e.target.value })
-                }
-              />
-              <label style={estilos.label}>Ubicación</label>
-              <input
-                style={estilos.input}
-                placeholder="Ej. Valle Sagrado"
-                value={nuevoSitio.ubicacion}
-                onChange={(e) =>
-                  setNuevoSitio({ ...nuevoSitio, ubicacion: e.target.value })
+                  setNuevaZona({ ...nuevaZona, nombre: e.target.value })
                 }
               />
               <label style={estilos.label}>Descripción</label>
               <input
                 style={estilos.input}
-                placeholder="Breve descripción del sitio"
-                value={nuevoSitio.descripcion}
+                placeholder="Breve descripción de la zona"
+                value={nuevaZona.descripcion}
                 onChange={(e) =>
-                  setNuevoSitio({ ...nuevoSitio, descripcion: e.target.value })
+                  setNuevaZona({ ...nuevaZona, descripcion: e.target.value })
+                }
+              />
+              <label style={estilos.label}>Latitud</label>
+              <input
+                style={estilos.input}
+                placeholder="Ej. -13.5170"
+                value={nuevaZona.latitud}
+                onChange={(e) =>
+                  setNuevaZona({ ...nuevaZona, latitud: e.target.value })
+                }
+              />
+              <label style={estilos.label}>Longitud</label>
+              <input
+                style={estilos.input}
+                placeholder="Ej. -71.9785"
+                value={nuevaZona.longitud}
+                onChange={(e) =>
+                  setNuevaZona({ ...nuevaZona, longitud: e.target.value })
                 }
               />
               <div style={{ display: "flex", gap: "10px", marginTop: "8px" }}>
-                <button style={estilos.botonNuevo} onClick={crearSitio}>
+                <button style={estilos.botonNuevo} onClick={crearZona}>
                   Guardar
                 </button>
                 <button
@@ -190,72 +194,28 @@ function SitiosPage() {
           </div>
         )}
 
-        {/* Cards de sitios */}
-        {cargando ? (
-          <p style={{ color: "#666" }}>Cargando sitios...</p>
-        ) : (
-          <div style={estilos.gridCards}>
-            {sitios.map((sitio, i) => {
-              const color = COLORES_CARD[i % COLORES_CARD.length];
-              const emoji = EMOJIS_SITIO[i % EMOJIS_SITIO.length];
-              const esSeleccionado = sitioSeleccionado?.id === sitio.id;
-              return (
-                <div
-                  key={sitio.id}
-                  style={{
-                    ...estilos.card,
-                    outline: esSeleccionado
-                      ? `2px solid ${color.accent}`
-                      : "2px solid transparent",
-                  }}
-                  onClick={() => setSitioSeleccionado(sitio)}
-                >
-                  <div
-                    style={{
-                      ...estilos.cardImagen,
-                      backgroundColor: color.fondo,
-                    }}
-                  >
-                    <span style={{ fontSize: "36px" }}>{emoji}</span>
-                  </div>
-                  <div style={estilos.cardInfo}>
-                    <p style={estilos.cardNombre}>{sitio.nombre}</p>
-                    <p style={estilos.cardUbicacion}>
-                      {sitio.descripcion || sitio.ubicacion}
-                    </p>
-                    <div style={estilos.cardBarra}>
-                      <div
-                        style={{
-                          ...estilos.cardBarraRelleno,
-                          backgroundColor: color.accent,
-                          width: `${30 + (i * 20) % 70}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
         {/* Tabla de zonas */}
-        {sitioSeleccionado && (
+        {cargando ? (
+          <p style={{ color: "#666" }}>Cargando zonas...</p>
+        ) : (
           <div style={estilos.tablaContenedor}>
             <table style={estilos.tabla}>
               <thead>
                 <tr>
                   <th style={estilos.th}>ZONA</th>
+                  <th style={estilos.th}>DESCRIPCIÓN</th>
                   <th style={estilos.th}>LATITUD</th>
                   <th style={estilos.th}>LONGITUD</th>
-                  <th style={estilos.th}>CONTENIDO</th>
-                  <th style={estilos.th}>ACCIONES</th>
+                  <th style={estilos.th}>CÓDIGO QR</th>
                 </tr>
               </thead>
               <tbody>
                 {zonas.length === 0 ? (
                   <tr>
-                    <td colSpan={5} style={{ ...estilos.td, color: "#aaa", textAlign: "center" }}>
+                    <td
+                      colSpan={5}
+                      style={{ ...estilos.td, color: "#aaa", textAlign: "center" }}
+                    >
                       Sin zonas registradas
                     </td>
                   </tr>
@@ -263,21 +223,33 @@ function SitiosPage() {
                   zonas.map((zona) => (
                     <tr key={zona.id}>
                       <td style={estilos.td}>{zona.nombre}</td>
+                      <td style={estilos.td}>{zona.descripcion}</td>
                       <td style={estilos.td}>{zona.latitud}</td>
                       <td style={estilos.td}>{zona.longitud}</td>
                       <td style={estilos.td}>
-                        <span style={estilos.badgeES}>ES + EN</span>
-                      </td>
-                      <td style={estilos.td}>
-                        <button
-                          style={estilos.botonIcono}
-                          onClick={() => navegar(`/zonas/${sitioSeleccionado.id}`)}
-                        >
-                          ✏️
-                        </button>
-                        <button style={{ ...estilos.botonIcono, color: "#e74c3c" }}>
-                          🗑
-                        </button>
+                        {qrGenerado[zona.id] ? (
+                          <div>
+                            <img
+                              src={qrGenerado[zona.id]}
+                              alt="Código QR"
+                              style={{ width: "70px", height: "70px" }}
+                            />
+                            <a
+                              href={qrGenerado[zona.id]}
+                              download={`qr-zona-${zona.id}.png`}
+                              style={estilos.linkDescarga}
+                            >
+                              Descargar
+                            </a>
+                          </div>
+                        ) : (
+                          <button
+                            style={estilos.botonQR}
+                            onClick={() => generarCodigoQR(zona.id)}
+                          >
+                            ⬛ Generar QR
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))
@@ -339,7 +311,6 @@ const estilos = {
     fontSize: "13px",
     cursor: "pointer",
     opacity: 0.75,
-    transition: "opacity 0.2s",
   },
   menuItemActivo: {
     backgroundColor: "rgba(255,255,255,0.15)",
@@ -395,6 +366,31 @@ const estilos = {
     cursor: "pointer",
     fontSize: "13px",
   },
+  botonVolver: {
+    backgroundColor: "white",
+    color: "#1a6645",
+    border: "1.5px solid #1a6645",
+    padding: "7px 14px",
+    borderRadius: "20px",
+    cursor: "pointer",
+    fontSize: "13px",
+    fontWeight: "600",
+  },
+  botonQR: {
+    backgroundColor: "#1a6645",
+    color: "white",
+    border: "none",
+    padding: "6px 12px",
+    borderRadius: "6px",
+    cursor: "pointer",
+    fontSize: "12px",
+  },
+  linkDescarga: {
+    display: "block",
+    marginTop: "4px",
+    fontSize: "11px",
+    color: "#2e8b57",
+  },
   avatar: {
     width: "34px",
     height: "34px",
@@ -406,50 +402,6 @@ const estilos = {
     justifyContent: "center",
     fontSize: "12px",
     fontWeight: "700",
-  },
-  gridCards: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-    gap: "16px",
-    marginBottom: "28px",
-  },
-  card: {
-    backgroundColor: "white",
-    borderRadius: "10px",
-    overflow: "hidden",
-    cursor: "pointer",
-    boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
-    transition: "transform 0.15s",
-  },
-  cardImagen: {
-    height: "80px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cardInfo: {
-    padding: "10px 14px 12px",
-  },
-  cardNombre: {
-    margin: "0 0 2px",
-    fontWeight: "700",
-    fontSize: "13px",
-    color: "#1a1a1a",
-  },
-  cardUbicacion: {
-    margin: "0 0 8px",
-    fontSize: "11px",
-    color: "#888",
-  },
-  cardBarra: {
-    height: "3px",
-    backgroundColor: "#eee",
-    borderRadius: "2px",
-    overflow: "hidden",
-  },
-  cardBarraRelleno: {
-    height: "100%",
-    borderRadius: "2px",
   },
   tablaContenedor: {
     backgroundColor: "white",
@@ -474,21 +426,6 @@ const estilos = {
     fontSize: "13px",
     borderBottom: "1px solid #f5f5f5",
     color: "#333",
-  },
-  badgeES: {
-    backgroundColor: "#d4f5e2",
-    color: "#1a6645",
-    padding: "2px 8px",
-    borderRadius: "10px",
-    fontSize: "11px",
-    fontWeight: "600",
-  },
-  botonIcono: {
-    background: "none",
-    border: "none",
-    cursor: "pointer",
-    fontSize: "14px",
-    marginRight: "4px",
   },
   modalOverlay: {
     position: "fixed",
@@ -525,4 +462,4 @@ const estilos = {
   error: { color: "#e74c3c", fontSize: "13px" },
 };
 
-export default SitiosPage;
+export default ZonasPage;
