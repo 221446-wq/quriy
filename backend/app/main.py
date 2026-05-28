@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from app.database import engine, Base
 from app.models import models
+from app.routes import auth
 
 Base.metadata.create_all(bind=engine)
 
@@ -9,6 +10,8 @@ app = FastAPI(
     description="Sistema de Autoguiado Turístico - Cusco",
     version="1.0.0"
 )
+
+app.include_router(auth.router)
 
 @app.get("/")
 def root():
