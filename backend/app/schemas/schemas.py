@@ -17,3 +17,58 @@ class UsuarioResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+from datetime import datetime
+
+class SitioCreate(BaseModel):
+    nombre: str
+    descripcion: Optional[str] = None
+    ubicacion: Optional[str] = None
+    imagen_url: Optional[str] = None
+
+class SitioResponse(BaseModel):
+    id: int
+    nombre: str
+    descripcion: Optional[str]
+    ubicacion: Optional[str]
+    imagen_url: Optional[str]
+    activo: bool
+
+    class Config:
+        from_attributes = True
+
+class ZonaCreate(BaseModel):
+    nombre: str
+    descripcion: Optional[str] = None
+    orden: Optional[int] = 0
+
+class ZonaResponse(BaseModel):
+    id: int
+    sitio_id: int
+    nombre: str
+    descripcion: Optional[str]
+    orden: int
+
+    class Config:
+        from_attributes = True
+
+class ContenidoResponse(BaseModel):
+    id: int
+    zona_id: int
+    tipo: str
+    idioma: str
+    url: Optional[str]
+    texto: Optional[str]
+
+    class Config:
+        from_attributes = True
+
+class QRResponse(BaseModel):
+    id: int
+    zona_id: int
+    codigo: str
+    url_destino: str
+    creado_en: datetime
+
+    class Config:
+        from_attributes = True
