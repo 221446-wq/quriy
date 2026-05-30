@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import clienteHttp from "../services/api";
-
+import QRCode from "qrcode";
 function ZonasPage() {
   const { idSitio } = useParams();
   const navegar = useNavigate();
@@ -52,14 +52,16 @@ function ZonasPage() {
   const generarCodigoQR = async (idZona) => {
     try {
       const respuesta = await clienteHttp.post(`/zonas/${idZona}/qr`);
-      setQrGenerado((prev) => ({
-        ...prev,
-        [idZona]: respuesta.data.imagen_qr,
-      }));
+      const imagenUrl = await QRCode.toDataURL(respuesta.data.url_destino, {
+        width: 200,
+        margin: 2,
+      });
+      setQrGenerado((prev) => ({ ...prev, [idZona]: imagenUrl }));
     } catch {
       setError("No se pudo generar el QR.");
     }
   };
+
 
   const cerrarSesion = () => {
     localStorage.removeItem("token");

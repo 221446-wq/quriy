@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware  # ← agregar
 from app.database import engine, Base
 from app.models import models
 from app.routes import auth, sitios
@@ -9,6 +10,15 @@ app = FastAPI(
     title="Quriy API",
     description="Sistema de Autoguiado Turístico - Cusco",
     version="1.0.0"
+)
+
+# ← agregar todo esto
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(auth.router)
