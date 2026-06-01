@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'core/tema_quriy.dart';
+import 'core/proveedor_idioma.dart';
 import 'screens/login_screen.dart';
 
 void main() {
-  runApp(const AplicacionQuriy());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => ProveedorDeIdioma(),
+      child: const AplicacionQuriy(),
+    ),
+  );
 }
 
 class AplicacionQuriy extends StatelessWidget {
@@ -13,13 +21,7 @@ class AplicacionQuriy extends StatelessWidget {
     return MaterialApp(
       title: 'Quriy',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF8B4513),
-          brightness: Brightness.light,
-        ),
-        useMaterial3: true,
-      ),
+      theme: TemaQuriy.construir(),
       home: const LoginScreen(),
     );
   }
