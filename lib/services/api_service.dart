@@ -2,15 +2,50 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+// ── Excepciones tipadas por dominio ───────────────────────────────────────────
+
+/// Lanzada cuando las credenciales no coinciden (HTTP 401).
+class ExcepcionCredencialesInvalidas implements Exception {
+  final String mensaje;
+  const ExcepcionCredencialesInvalidas(
+      [this.mensaje = 'Credenciales incorrectas']);
+
+  @override
+  String toString() => 'ExcepcionCredencialesInvalidas: $mensaje';
+}
+
+/// Lanzada cuando el código QR no corresponde a ninguna zona registrada.
+class ExcepcionCodigoQRInvalido implements Exception {
+  final String codigoRecibido;
+  const ExcepcionCodigoQRInvalido(this.codigoRecibido);
+
+  @override
+  String toString() =>
+      'ExcepcionCodigoQRInvalido: "$codigoRecibido" '
+          'no corresponde a ninguna zona registrada';
+}
+
+// ── Servicio principal ────────────────────────────────────────────────────────
+
 class ApiService {
+  // ── Instancia interna para inyección de dependencias en pruebas ───
+  // Las pantallas usan los métodos estáticos igual que antes.
+  // Las pruebas crean ApiService(clienteHttp: mock) y llaman métodos de instancia.
+  final http.Client clienteHttp;
+
+  ApiService({http.Client? clienteHttp})
+      : clienteHttp = clienteHttp ?? http.Client();
+
+  // Instancia interna usada por los métodos estáticos (producción)
+  static final ApiService _instanciaProduccion = ApiService();
+
+  // ── Configuración ──────────────────────────────────────────────
   static const String baseUrl = 'http://10.0.2.2:8000';
 
-  // ── Credenciales locales para pruebas ─────────────────────────
-  // Cuando conectes el backend real, estas líneas ya no se usan
-  static const String _emailPrueba = 'axel@quiry';
+  static const String _emailPrueba    = 'axel@quiry';
   static const String _passwordPrueba = 'axel1';
 
-  // ── Datos de prueba locales ────────────────────────────────────
+  // ── Datos locales de prueba ────────────────────────────────────
   static List<Map<String, dynamic>> get _zonasPrueba => [
     {
       'id': 1,
@@ -48,7 +83,7 @@ class ApiService {
       'idioma': 'es',
       'titulo': 'Historia de la zona',
       'descripcion':
-      'Esta zona fue construida aproximadamente en el siglo XV durante el apogeo del Imperio Inca. Los arqueólogos han encontrado evidencia de actividad ritual continua durante más de 200 años.',
+      'Esta zona fue construida aproximadamente en el siglo XV durante el apogeo del Imperio Inca.',
       'url_recurso': '',
     },
     {
@@ -66,7 +101,8 @@ class ApiService {
       'idioma': 'es',
       'titulo': 'Audioguía en español',
       'descripcion': 'Narración completa del recorrido por esta zona.',
-      'url_recurso': 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+      'url_recurso':
+      'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
     },
     {
       'id': 4,
@@ -74,7 +110,7 @@ class ApiService {
       'idioma': 'en',
       'titulo': 'Zone History',
       'descripcion':
-      'This zone was built approximately in the 15th century during the height of the Inca Empire. Archaeologists have found evidence of continuous ritual activity for over 200 years.',
+      'This zone was built approximately in the 15th century during the height of the Inca Empire.',
       'url_recurso': '',
     },
     {
@@ -92,11 +128,12 @@ class ApiService {
       'idioma': 'en',
       'titulo': 'Audio guide in English',
       'descripcion': 'Full narration of the tour through this zone.',
-      'url_recurso': 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
+      'url_recurso':
+      'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
     },
   ];
 
-  // ── Token ──────────────────────────────────────────────────────
+  // ── Token (estático — las pantallas lo llaman igual que antes) ─
   static Future<void> guardarToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('jwt_token', token);
@@ -112,20 +149,49 @@ class ApiService {
     await prefs.remove('jwt_token');
   }
 
-  static Future<Map<String, String>> _headersConToken() async {
-    final token = await obtenerToken();
+  Future<Map<String, String>> _headersConToken() async {
+    final token = await ApiService.obtenerToken();
     return {
       'Content-Type': 'application/json',
       if (token != null) 'Authorization': 'Bearer $token',
     };
   }
 
-  // ── Auth ───────────────────────────────────────────────────────
-  static Future<Map<String, dynamic>> iniciarSesion(
+  // ══════════════════════════════════════════════════════════════
+  // MÉTODOS ESTÁTICOS — las pantallas los llaman igual que antes
+  // Internamente delegan a la instancia de producción
+  // ══════════════════════════════════════════════════════════════
+
+  /// Las pantallas llaman esto: ApiService.iniciarSesion(email, pass)
+  /// No cambia nada en login_screen.dart
+  static Future<Map<String, dynamic>> iniciarSesion(String email, String password) {
+    return _instanciaProduccion.iniciarSesionInterno(email, password);
+  }
+
+  /// Las pantallas llaman esto: ApiService.obtenerZonasDeSitio(id)
+  /// No cambia nada en mapa_zonas_screen.dart
+  static Future<List<dynamic>> obtenerZonasDeSitio(int sitioId) {
+    return _instanciaProduccion.obtenerZonasDeSitioInterno(sitioId);
+  }
+
+  /// Las pantallas llaman esto: ApiService.obtenerContenidoDeZona(id)
+  /// No cambia nada en zona_detalle_screen.dart ni escaner_qr_screen.dart
+  static Future<List<dynamic>> obtenerContenidoDeZona(int zonaId) {
+    return _instanciaProduccion.obtenerContenidoDeZonaInterno(zonaId);
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // MÉTODOS DE INSTANCIA — estos sí se pueden mockear en pruebas
+  // ══════════════════════════════════════════════════════════════
+
+  /// Autentica al usuario contra la API.
+  ///
+  /// Retorna Map con {'exito': true, 'datos': {'access_token': ...}}
+  /// Lanza [ExcepcionCredencialesInvalidas] si el servidor responde 401.
+  Future<Map<String, dynamic>> iniciarSesionInterno(
       String email, String password) async {
-    // Primero intenta con el backend real
     try {
-      final respuesta = await http
+      final respuesta = await clienteHttp
           .post(
         Uri.parse('$baseUrl/auth/login'),
         headers: {'Content-Type': 'application/json'},
@@ -135,31 +201,42 @@ class ApiService {
 
       if (respuesta.statusCode == 200) {
         return {'exito': true, 'datos': jsonDecode(respuesta.body)};
-      } else if (respuesta.statusCode == 401) {
-        return {'exito': false, 'mensaje': 'Credenciales incorrectas'};
       }
-    } catch (_) {
-      // Backend no disponible → usar credenciales locales
+
+      if (respuesta.statusCode == 401) {
+        throw const ExcepcionCredencialesInvalidas();
+      }
+    } catch (excepcion) {
+      // Re-lanzar excepciones de dominio — no tragarlas
+      if (excepcion is ExcepcionCredencialesInvalidas) rethrow;
+      // Backend no disponible → caer a credenciales locales
     }
 
-    // Modo local: validar con credenciales de prueba
-    await Future.delayed(const Duration(milliseconds: 800)); // simula red
+    // Modo local sin backend
+    await Future.delayed(const Duration(milliseconds: 800));
     if (email == _emailPrueba && password == _passwordPrueba) {
       return {
         'exito': true,
-        'datos': {'access_token': 'token_local_prueba', 'token_type': 'bearer'},
+        'datos': {
+          'access_token': 'token_local_prueba',
+          'token_type': 'bearer',
+        },
       };
     }
     return {'exito': false, 'mensaje': 'Credenciales incorrectas'};
   }
 
-  // ── Zonas ──────────────────────────────────────────────────────
-  static Future<List<dynamic>> obtenerZonasDeSitio(int sitioId) async {
+  /// Obtiene las zonas de un sitio arqueológico.
+  Future<List<dynamic>> obtenerZonasDeSitioInterno(int sitioId) async {
     try {
       final headers = await _headersConToken();
-      final respuesta = await http
-          .get(Uri.parse('$baseUrl/sitios/$sitioId/zonas'), headers: headers)
+      final respuesta = await clienteHttp
+          .get(
+        Uri.parse('$baseUrl/sitios/$sitioId/zonas'),
+        headers: headers,
+      )
           .timeout(const Duration(seconds: 4));
+
       if (respuesta.statusCode == 200) return jsonDecode(respuesta.body);
     } catch (_) {
       // Backend no disponible → datos locales
@@ -168,18 +245,47 @@ class ApiService {
     return _zonasPrueba;
   }
 
-  // ── Contenido ──────────────────────────────────────────────────
-  static Future<List<dynamic>> obtenerContenidoDeZona(int zonaId) async {
+  /// Obtiene el contenido multimedia de una zona.
+  ///
+  /// Nunca lanza excepción — retorna lista vacía o datos locales
+  /// para no interrumpir la experiencia del turista.
+  Future<List<dynamic>> obtenerContenidoDeZonaInterno(int zonaId) async {
     try {
       final headers = await _headersConToken();
-      final respuesta = await http
-          .get(Uri.parse('$baseUrl/zonas/$zonaId/contenido'), headers: headers)
+      final respuesta = await clienteHttp
+          .get(
+        Uri.parse('$baseUrl/zonas/$zonaId/contenido'),
+        headers: headers,
+      )
           .timeout(const Duration(seconds: 4));
+
       if (respuesta.statusCode == 200) return jsonDecode(respuesta.body);
     } catch (_) {
       // Backend no disponible → datos locales
     }
     await Future.delayed(const Duration(milliseconds: 500));
     return _contenidoPrueba(zonaId);
+  }
+
+  // ── QR — método de instancia directamente (sin estático) ──────
+
+  /// Extrae el ID de zona desde un código QR escaneado.
+  ///
+  /// Formatos válidos: "zona:5" o simplemente "5".
+  /// Lanza [ExcepcionCodigoQRInvalido] si el formato no es reconocido.
+  int extraerIdDeZonaDesdeQR(String codigoQR) {
+    final codigoLimpio = codigoQR.trim();
+
+    if (codigoLimpio.startsWith('zona:')) {
+      final partes   = codigoLimpio.split(':');
+      final idTexto  = partes.length > 1 ? partes[1] : '';
+      final idParsed = int.tryParse(idTexto);
+      if (idParsed != null && idParsed > 0) return idParsed;
+    }
+
+    final idDirecto = int.tryParse(codigoLimpio);
+    if (idDirecto != null && idDirecto > 0) return idDirecto;
+
+    throw ExcepcionCodigoQRInvalido(codigoQR);
   }
 }
