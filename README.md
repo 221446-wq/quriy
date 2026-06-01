@@ -96,24 +96,6 @@ flutter pub get
 flutter run
 ```
 
-### Credenciales de prueba (seed)
-| Rol | Email | Contraseña |
-|-----|-------|------------|
-| Administrador | admin@quriy.pe | admin123 |
-| Turista | turista@quriy.pe | turista123 |
-
----
-
-## Links de Deploy
-
-| Servicio | URL |
-|----------|-----|
-| API REST | https://quriy-api.onrender.com *(pendiente)* |
-| Panel Web Admin | https://quriy-web.vercel.app *(pendiente)* |
-| APK Android | *(pendiente — Google Drive)* |
-| Prototipo Framer | *(pendiente)* |
-
----
 
 ## Estructura del Repositorio
 
