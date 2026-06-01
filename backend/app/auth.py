@@ -6,7 +6,7 @@ SECRET_KEY = "quriy-secret-key-cusco-2024"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 1440
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["sha256_crypt"], deprecated="auto")
 
 def verificar_password(plain, hashed):
     return pwd_context.verify(plain, hashed)
