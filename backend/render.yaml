@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: quriy-api
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: SECRET_KEY
+        value: quriy-secret-key-cusco-2024
+      - key: DATABASE_URL
+        value: sqlite:///./quriy.db
