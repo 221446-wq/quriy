@@ -193,6 +193,10 @@ function SitiosPage() {
         {/* Cards de sitios */}
         {cargando ? (
           <p style={{ color: "#666" }}>Cargando sitios...</p>
+        ) : sitios.length === 0 ? (
+          <p style={{ color: "#aaa", textAlign: "center", padding: "40px 0" }}>
+            No hay sitios registrados aún.
+          </p>
         ) : (
           <div style={estilos.gridCards}>
             {sitios.map((sitio, i) => {
