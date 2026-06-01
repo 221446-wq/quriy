@@ -16,10 +16,9 @@ dependencies:
   http: ^1.2.0
   mobile_scanner: ^5.1.0
   flutter_map: ^6.1.0
-  latlong2: ^0.9.1
+  latlong2: ^0.9.0
   provider: ^6.1.2
   shared_preferences: ^2.2.3
-
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8

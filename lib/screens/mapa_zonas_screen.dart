@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong2.dart';
+import 'package:latlong2/latlong.dart';
 import '../models/zona.dart';
 import '../services/api_service.dart';
 import 'zona_detalle_screen.dart';
 import 'escaner_qr_screen.dart';
+
 
 class MapaZonasScreen extends StatefulWidget {
   final int sitioId;
