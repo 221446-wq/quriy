@@ -72,3 +72,11 @@ class QRResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class ZonaUpdate(BaseModel):
+    nombre: Optional[str] = None
+    descripcion: Optional[str] = None
+    orden: Optional[int] = None
+    latitud: Optional[float] = None
+    longitud: Optional[float] = None
+    activa: Optional[bool] = None

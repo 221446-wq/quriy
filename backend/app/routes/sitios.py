@@ -8,7 +8,7 @@ from app.models.models import SitioArqueologico, Zona, Contenido, CodigoQR, Usua
 from app.auth import verificar_token
 from app.schemas.schemas import (
     SitioCreate, SitioResponse,
-    ZonaCreate, ZonaResponse,
+    ZonaCreate, ZonaResponse, ZonaUpdate,
     ContenidoResponse, QRResponse
 )
 
@@ -146,3 +146,46 @@ def generar_codigo_qr_zona(
     db.commit()
     db.refresh(qr)
     return qr
+
+@router.put("/zonas/{id}", response_model=ZonaResponse)
+def editar_zona(
+    id: int,
+    datos: ZonaUpdate,
+    db: Session = Depends(get_db),
+    admin: Usuario = Depends(verificar_admin)
+):
+    zona = db.query(Zona).filter(Zona.id == id).first()
+    if not zona:
+        raise HTTPException(status_code=404, detail="Zona no encontrada")
+
+    if datos.nombre is not None:
+        zona.nombre = datos.nombre
+    if datos.descripcion is not None:
+        zona.descripcion = datos.descripcion
+    if datos.orden is not None:
+        zona.orden = datos.orden
+    if datos.latitud is not None:
+        zona.latitud = datos.latitud
+    if datos.longitud is not None:
+        zona.longitud = datos.longitud
+    if datos.activa is not None:
+        zona.activa = datos.activa
+
+    db.commit()
+    db.refresh(zona)
+    return zona
+
+
+@router.delete("/zonas/{id}", status_code=204)
+def eliminar_zona(
+    id: int,
+    db: Session = Depends(get_db),
+    admin: Usuario = Depends(verificar_admin)
+):
+    zona = db.query(Zona).filter(Zona.id == id).first()
+    if not zona:
+        raise HTTPException(status_code=404, detail="Zona no encontrada")
+
+    db.delete(zona)
+    db.commit()
+    return None
