@@ -190,3 +190,16 @@ class CalificacionPromedio(BaseModel):
     nombre_zona: str
     promedio: float
     total_valoraciones: int
+
+class AudioResponse(BaseModel):
+    id: int
+    zona_id: int
+    idioma: str
+    url: Optional[str] = None
+    titulo: Optional[str] = None
+    url_recurso: Optional[str] = None
+    nombre_zona: Optional[str] = None
+    fecha_creacion: Optional[str] = None
+
+    class Config:
+        from_attributes = True

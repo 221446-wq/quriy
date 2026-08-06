@@ -103,3 +103,20 @@ def eliminar_contenido(
     db.delete(contenido)
     db.commit()
     return None
+
+@router.get("/contenido/audios", response_model=List[ContenidoResponse])
+def listar_biblioteca_audios(
+    zona_id: int = None,
+    idioma: str = None,
+    db: Session = Depends(get_db),
+    admin: Usuario = Depends(verificar_admin)
+):
+    query = db.query(Contenido).filter(Contenido.tipo == "audio")
+
+    if zona_id:
+        query = query.filter(Contenido.zona_id == zona_id)
+    if idioma:
+        query = query.filter(Contenido.idioma == idioma)
+
+    audios = query.order_by(Contenido.id.desc()).all()
+    return audios
