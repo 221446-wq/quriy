@@ -61,6 +61,8 @@ class ContenidoResponse(BaseModel):
     idioma: str
     url: Optional[str]
     texto: Optional[str]
+    titulo: Optional[str] = None
+    url_recurso: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -215,3 +217,4 @@ class QRListResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
