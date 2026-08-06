@@ -102,7 +102,9 @@ def crear_zona_en_sitio(
         sitio_id=id,
         nombre=datos.nombre,
         descripcion=datos.descripcion,
-        orden=datos.orden
+        orden=datos.orden,
+        latitud=datos.latitud,
+        longitud=datos.longitud
     )
     db.add(zona)
     db.commit()

@@ -43,6 +43,8 @@ class ZonaCreate(BaseModel):
     nombre: str
     descripcion: Optional[str] = None
     orden: Optional[int] = 0
+    latitud: Optional[float] = None
+    longitud: Optional[float] = None
 
 class ZonaResponse(BaseModel):
     id: int
@@ -50,6 +52,8 @@ class ZonaResponse(BaseModel):
     nombre: str
     descripcion: Optional[str]
     orden: int
+    latitud: Optional[float] = None
+    longitud: Optional[float] = None
 
     class Config:
         from_attributes = True
