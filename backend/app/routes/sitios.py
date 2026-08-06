@@ -130,12 +130,25 @@ def listar_contenido_de_zona(
 @router.post("/zonas/{id}/qr", response_model=QRResponse, status_code=201)
 def generar_codigo_qr_zona(
     id: int,
+    forzar: bool = False,
     db: Session = Depends(get_db),
     admin: Usuario = Depends(verificar_admin)
 ):
     zona = db.query(Zona).filter(Zona.id == id).first()
     if not zona:
         raise HTTPException(status_code=404, detail="Zona no encontrada")
+
+    qr_existente = db.query(CodigoQR).filter(
+        CodigoQR.zona_id == id
+    ).first()
+
+    if qr_existente and not forzar:
+        return qr_existente
+
+    if qr_existente and forzar:
+        db.delete(qr_existente)
+        db.commit()
+
     codigo_unico = str(uuid.uuid4())
     url_destino = f"https://quriy.app/zonas/{id}"
     qr = CodigoQR(
@@ -258,3 +271,22 @@ def listar_todos_codigos_qr(
             nombre_sitio=sitio.nombre if sitio else None
         ))
     return resultado
+
+@router.get("/zonas/{id}/qr", response_model=QRResponse)
+def obtener_qr_zona(
+    id: int,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(obtener_usuario_token)
+):
+    zona = db.query(Zona).filter(Zona.id == id).first()
+    if not zona:
+        raise HTTPException(status_code=404, detail="Zona no encontrada")
+
+    qr = db.query(CodigoQR).filter(
+        CodigoQR.zona_id == id
+    ).first()
+
+    if not qr:
+        raise HTTPException(status_code=404, detail="No existe QR para esta zona")
+
+    return qr

@@ -66,4 +66,11 @@ def test_generar_qr_retorna_codigo_unico(client, token_admin):
 
     assert qr1.status_code == 201
     assert qr2.status_code == 201
-    assert qr1.json()["codigo"] != qr2.json()["codigo"]
+    assert qr1.json()["codigo"] == qr2.json()["codigo"]
+
+    qr_forzado = client.post(
+        f"/zonas/{zona_id}/qr?forzar=true",
+        headers={"Authorization": f"Bearer {token_admin}"}
+    )
+    assert qr_forzado.status_code == 201
+    assert qr_forzado.json()["codigo"] != qr1.json()["codigo"]
