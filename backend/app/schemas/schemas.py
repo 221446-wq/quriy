@@ -96,3 +96,23 @@ class ContenidoUpdate(BaseModel):
     texto: Optional[str] = None
     titulo: Optional[str] = None
     url_recurso: Optional[str] = None
+
+class RecorridoCreate(BaseModel):
+    turista_id: int
+    sitio_id: int
+
+class RecorridoResponse(BaseModel):
+    id: int
+    turista_id: int
+    sitio_id: int
+    inicio: datetime
+    fin: Optional[datetime] = None
+    calificacion: Optional[float] = None
+    comentario: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class RecorridoFinish(BaseModel):
+    calificacion: Optional[float] = None
+    comentario: Optional[str] = None
