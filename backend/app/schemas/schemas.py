@@ -80,3 +80,19 @@ class ZonaUpdate(BaseModel):
     latitud: Optional[float] = None
     longitud: Optional[float] = None
     activa: Optional[bool] = None
+
+class ContenidoCreate(BaseModel):
+    tipo: str
+    idioma: str = "es"
+    url: Optional[str] = None
+    texto: Optional[str] = None
+    titulo: Optional[str] = None
+    url_recurso: Optional[str] = None
+
+class ContenidoUpdate(BaseModel):
+    tipo: Optional[str] = None
+    idioma: Optional[str] = None
+    url: Optional[str] = None
+    texto: Optional[str] = None
+    titulo: Optional[str] = None
+    url_recurso: Optional[str] = None
