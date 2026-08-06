@@ -203,3 +203,15 @@ class AudioResponse(BaseModel):
 
     class Config:
         from_attributes = True
+class QRListResponse(BaseModel):
+    id: int
+    zona_id: int
+    codigo: str
+    url_destino: str
+    activo: bool
+    creado_en: datetime
+    nombre_zona: Optional[str] = None
+    nombre_sitio: Optional[str] = None
+
+    class Config:
+        from_attributes = True

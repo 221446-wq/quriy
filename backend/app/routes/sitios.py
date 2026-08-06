@@ -9,9 +9,8 @@ from app.auth import verificar_token
 from app.schemas.schemas import (
     SitioCreate, SitioResponse, SitioUpdate,
     ZonaCreate, ZonaResponse, ZonaUpdate,
-    ContenidoResponse, QRResponse
+    ContenidoResponse, QRResponse, QRListResponse
 )
-
 router = APIRouter(tags=["Sitios y Zonas"])
 security = HTTPBearer()
 
@@ -233,3 +232,27 @@ def eliminar_sitio_arqueologico(
     db.delete(sitio)
     db.commit()
     return None
+
+@router.get("/qr/todos", response_model=List[QRListResponse])
+def listar_todos_codigos_qr(
+    db: Session = Depends(get_db),
+    admin: Usuario = Depends(verificar_admin)
+):
+    codigos = db.query(CodigoQR).all()
+    resultado = []
+    for qr in codigos:
+        zona = db.query(Zona).filter(Zona.id == qr.zona_id).first()
+        sitio = db.query(SitioArqueologico).filter(
+            SitioArqueologico.id == zona.sitio_id
+        ).first() if zona else None
+        resultado.append(QRListResponse(
+            id=qr.id,
+            zona_id=qr.zona_id,
+            codigo=qr.codigo,
+            url_destino=qr.url_destino,
+            activo=qr.activo,
+            creado_en=qr.creado_en,
+            nombre_zona=zona.nombre if zona else None,
+            nombre_sitio=sitio.nombre if sitio else None
+        ))
+    return resultado
