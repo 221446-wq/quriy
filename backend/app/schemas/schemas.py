@@ -167,3 +167,26 @@ class ResumenDashboard(BaseModel):
     total_usuarios: int
     total_visitas: int
     total_qrs: int
+
+class SitioMasVisitado(BaseModel):
+    sitio_id: int
+    nombre_sitio: str
+    total_visitas: int
+
+class EscaneosPorDia(BaseModel):
+    fecha: str
+    total: int
+
+class EscaneosPorMes(BaseModel):
+    mes: str
+    total: int
+
+class IdiomaMasUsado(BaseModel):
+    idioma: str
+    total: int
+
+class CalificacionPromedio(BaseModel):
+    zona_id: int
+    nombre_zona: str
+    promedio: float
+    total_valoraciones: int
