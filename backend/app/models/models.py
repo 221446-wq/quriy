@@ -98,5 +98,7 @@ class VisitaZona(Base):
     timestamp = Column(DateTime, default=datetime.utcnow)
     idioma = Column(String, default="es")
     metodo_acceso = Column(String, nullable=True)
+    calificacion = Column(Float, nullable=True)
+    comentario = Column(Text, nullable=True)
     turista = relationship("Turista", back_populates="visitas")
     zona = relationship("Zona", back_populates="visitas")

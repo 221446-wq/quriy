@@ -126,3 +126,37 @@ class SitioUpdate(BaseModel):
     imagen_url: Optional[str] = None
     activo: Optional[bool] = None
     horario: Optional[str] = None
+
+class VisitaZonaCreate(BaseModel):
+    turista_id: int
+    zona_id: int
+    idioma: Optional[str] = "es"
+    metodo_acceso: Optional[str] = None
+    calificacion: Optional[float] = None
+    comentario: Optional[str] = None
+
+class VisitaZonaResponse(BaseModel):
+    id: int
+    turista_id: int
+    zona_id: int
+    timestamp: datetime
+    idioma: str
+    metodo_acceso: Optional[str] = None
+    calificacion: Optional[float] = None
+    comentario: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class ValoracionResponse(BaseModel):
+    id: int
+    turista_id: int
+    zona_id: int
+    timestamp: datetime
+    calificacion: Optional[float] = None
+    comentario: Optional[str] = None
+    nombre_zona: Optional[str] = None
+    nombre_sitio: Optional[str] = None
+
+    class Config:
+        from_attributes = True
