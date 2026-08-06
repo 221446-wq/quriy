@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from app.database import engine, Base
 from app.models import models
-from app.routes import auth, sitios, contenido, recorridos, visitas
+from app.routes import auth, sitios, contenido, recorridos, visitas, estadisticas
 
 Base.metadata.create_all(bind=engine)
 
@@ -19,6 +19,7 @@ app.include_router(sitios.router)
 app.include_router(contenido.router)
 app.include_router(recorridos.router)
 app.include_router(visitas.router)
+app.include_router(estadisticas.router)
 
 @app.get("/")
 def root():

@@ -160,3 +160,10 @@ class ValoracionResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class ResumenDashboard(BaseModel):
+    total_sitios: int
+    total_zonas: int
+    total_usuarios: int
+    total_visitas: int
+    total_qrs: int
