@@ -37,6 +37,7 @@ class SitioArqueologico(Base):
     ubicacion = Column(String)
     imagen_url = Column(String)
     activo = Column(Boolean, default=True)
+    horario = Column(String, nullable=True)
     zonas = relationship("Zona", back_populates="sitio")
 
 class Zona(Base):

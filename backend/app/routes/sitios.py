@@ -7,7 +7,7 @@ from app.database import get_db
 from app.models.models import SitioArqueologico, Zona, Contenido, CodigoQR, Usuario
 from app.auth import verificar_token
 from app.schemas.schemas import (
-    SitioCreate, SitioResponse,
+    SitioCreate, SitioResponse, SitioUpdate,
     ZonaCreate, ZonaResponse, ZonaUpdate,
     ContenidoResponse, QRResponse
 )
@@ -187,5 +187,49 @@ def eliminar_zona(
         raise HTTPException(status_code=404, detail="Zona no encontrada")
 
     db.delete(zona)
+    db.commit()
+    return None
+
+@router.put("/sitios/{id}", response_model=SitioResponse)
+def editar_sitio_arqueologico(
+    id: int,
+    datos: SitioUpdate,
+    db: Session = Depends(get_db),
+    admin: Usuario = Depends(verificar_admin)
+):
+    sitio = db.query(SitioArqueologico).filter(
+        SitioArqueologico.id == id
+    ).first()
+    if not sitio:
+        raise HTTPException(status_code=404, detail="Sitio no encontrado")
+    if datos.nombre is not None:
+        sitio.nombre = datos.nombre
+    if datos.descripcion is not None:
+        sitio.descripcion = datos.descripcion
+    if datos.ubicacion is not None:
+        sitio.ubicacion = datos.ubicacion
+    if datos.imagen_url is not None:
+        sitio.imagen_url = datos.imagen_url
+    if datos.activo is not None:
+        sitio.activo = datos.activo
+    if datos.horario is not None:
+        sitio.horario = datos.horario
+    db.commit()
+    db.refresh(sitio)
+    return sitio
+
+
+@router.delete("/sitios/{id}", status_code=204)
+def eliminar_sitio_arqueologico(
+    id: int,
+    db: Session = Depends(get_db),
+    admin: Usuario = Depends(verificar_admin)
+):
+    sitio = db.query(SitioArqueologico).filter(
+        SitioArqueologico.id == id
+    ).first()
+    if not sitio:
+        raise HTTPException(status_code=404, detail="Sitio no encontrado")
+    db.delete(sitio)
     db.commit()
     return None

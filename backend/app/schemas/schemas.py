@@ -25,6 +25,7 @@ class SitioCreate(BaseModel):
     descripcion: Optional[str] = None
     ubicacion: Optional[str] = None
     imagen_url: Optional[str] = None
+    horario: Optional[str] = None
 
 class SitioResponse(BaseModel):
     id: int
@@ -33,6 +34,7 @@ class SitioResponse(BaseModel):
     ubicacion: Optional[str]
     imagen_url: Optional[str]
     activo: bool
+    horario: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -116,3 +118,11 @@ class RecorridoResponse(BaseModel):
 class RecorridoFinish(BaseModel):
     calificacion: Optional[float] = None
     comentario: Optional[str] = None
+
+class SitioUpdate(BaseModel):
+    nombre: Optional[str] = None
+    descripcion: Optional[str] = None
+    ubicacion: Optional[str] = None
+    imagen_url: Optional[str] = None
+    activo: Optional[bool] = None
+    horario: Optional[str] = None
