@@ -128,16 +128,19 @@ function ZonasPage() {
         })}
 
         <p style={estilos.menuSeccion}>HERRAMIENTAS</p>
-        {menuItems.slice(2).map((item) => (
-          <div
-            key={item.label}
-            style={estilos.menuItem}
-            onClick={item.label === "Valoraciones" ? () => navegar("/valoraciones") : undefined}
-          >
-            <span>{item.icono}</span>
-            <span>{item.label}</span>
-          </div>
-        ))}
+        {menuItems.slice(2).map((item) => {
+          const ruta = item.label === "Valoraciones" ? "/valoraciones" : item.label === "Estadísticas" ? "/estadisticas" : null;
+          return (
+            <div
+              key={item.label}
+              style={estilos.menuItem}
+              onClick={ruta ? () => navegar(ruta) : undefined}
+            >
+              <span>{item.icono}</span>
+              <span>{item.label}</span>
+            </div>
+          );
+        })}
 
         <div style={estilos.sidebarPie} onClick={cerrarSesion}>
           🚪 Cerrar sesión

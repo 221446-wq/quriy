@@ -5,6 +5,7 @@ import ZonasPage from "./pages/ZonasPage";
 import ContenidoPage from "./pages/ContenidoPage";
 import ValoracionesPage from "./pages/ValoracionesPage";
 import DashboardPage from "./pages/DashboardPage";
+import EstadisticasPage from "./pages/EstadisticasPage";
 
 function RutaProtegida({ children }) {
   const token = localStorage.getItem("token");
@@ -54,6 +55,14 @@ function App() {
           element={
             <RutaProtegida>
               <DashboardPage />
+            </RutaProtegida>
+          }
+        />
+        <Route
+          path="/estadisticas"
+          element={
+            <RutaProtegida>
+              <EstadisticasPage />
             </RutaProtegida>
           }
         />
