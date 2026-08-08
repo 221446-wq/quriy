@@ -209,13 +209,14 @@ function ZonasPage() {
                   <th style={estilos.th}>LATITUD</th>
                   <th style={estilos.th}>LONGITUD</th>
                   <th style={estilos.th}>CÓDIGO QR</th>
+                  <th style={estilos.th}>CONTENIDO</th>
                 </tr>
               </thead>
               <tbody>
                 {zonas.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={5}
+                      colSpan={6}
                       style={{ ...estilos.td, color: "#aaa", textAlign: "center" }}
                     >
                       Sin zonas registradas
@@ -252,6 +253,18 @@ function ZonasPage() {
                             ⬛ Generar QR
                           </button>
                         )}
+                      </td>
+                      <td style={estilos.td}>
+                        <button
+                          style={estilos.botonQR}
+                          onClick={() =>
+                            navegar(`/contenido/${zona.id}`, {
+                              state: { nombreZona: zona.nombre, idSitio },
+                            })
+                          }
+                        >
+                          🎧 Contenido
+                        </button>
                       </td>
                     </tr>
                   ))

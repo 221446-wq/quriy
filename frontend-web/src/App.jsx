@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
 import SitiosPage from "./pages/SitiosPage";
 import ZonasPage from "./pages/ZonasPage";
+import ContenidoPage from "./pages/ContenidoPage";
 
 function RutaProtegida({ children }) {
   const token = localStorage.getItem("token");
@@ -27,6 +28,14 @@ function App() {
           element={
             <RutaProtegida>
               <ZonasPage />
+            </RutaProtegida>
+          }
+        />
+        <Route
+          path="/contenido/:idZona"
+          element={
+            <RutaProtegida>
+              <ContenidoPage />
             </RutaProtegida>
           }
         />
