@@ -7,11 +7,10 @@ from app.database import get_db
 from app.models.models import SitioArqueologico, Zona, Contenido, CodigoQR, Usuario
 from app.auth import verificar_token
 from app.schemas.schemas import (
-    SitioCreate, SitioResponse,
-    ZonaCreate, ZonaResponse,
-    ContenidoResponse, QRResponse
+    SitioCreate, SitioResponse, SitioUpdate,
+    ZonaCreate, ZonaResponse, ZonaUpdate,
+    ContenidoResponse, QRResponse, QRListResponse
 )
-
 router = APIRouter(tags=["Sitios y Zonas"])
 security = HTTPBearer()
 
@@ -103,7 +102,9 @@ def crear_zona_en_sitio(
         sitio_id=id,
         nombre=datos.nombre,
         descripcion=datos.descripcion,
-        orden=datos.orden
+        orden=datos.orden,
+        latitud=datos.latitud,
+        longitud=datos.longitud
     )
     db.add(zona)
     db.commit()
@@ -129,12 +130,25 @@ def listar_contenido_de_zona(
 @router.post("/zonas/{id}/qr", response_model=QRResponse, status_code=201)
 def generar_codigo_qr_zona(
     id: int,
+    forzar: bool = False,
     db: Session = Depends(get_db),
     admin: Usuario = Depends(verificar_admin)
 ):
     zona = db.query(Zona).filter(Zona.id == id).first()
     if not zona:
         raise HTTPException(status_code=404, detail="Zona no encontrada")
+
+    qr_existente = db.query(CodigoQR).filter(
+        CodigoQR.zona_id == id
+    ).first()
+
+    if qr_existente and not forzar:
+        return qr_existente
+
+    if qr_existente and forzar:
+        db.delete(qr_existente)
+        db.commit()
+
     codigo_unico = str(uuid.uuid4())
     url_destino = f"https://quriy.app/zonas/{id}"
     qr = CodigoQR(
@@ -145,4 +159,134 @@ def generar_codigo_qr_zona(
     db.add(qr)
     db.commit()
     db.refresh(qr)
+    return qr
+
+@router.put("/zonas/{id}", response_model=ZonaResponse)
+def editar_zona(
+    id: int,
+    datos: ZonaUpdate,
+    db: Session = Depends(get_db),
+    admin: Usuario = Depends(verificar_admin)
+):
+    zona = db.query(Zona).filter(Zona.id == id).first()
+    if not zona:
+        raise HTTPException(status_code=404, detail="Zona no encontrada")
+
+    if datos.nombre is not None:
+        zona.nombre = datos.nombre
+    if datos.descripcion is not None:
+        zona.descripcion = datos.descripcion
+    if datos.orden is not None:
+        zona.orden = datos.orden
+    if datos.latitud is not None:
+        zona.latitud = datos.latitud
+    if datos.longitud is not None:
+        zona.longitud = datos.longitud
+    if datos.activa is not None:
+        zona.activa = datos.activa
+
+    db.commit()
+    db.refresh(zona)
+    return zona
+
+
+@router.delete("/zonas/{id}", status_code=204)
+def eliminar_zona(
+    id: int,
+    db: Session = Depends(get_db),
+    admin: Usuario = Depends(verificar_admin)
+):
+    zona = db.query(Zona).filter(Zona.id == id).first()
+    if not zona:
+        raise HTTPException(status_code=404, detail="Zona no encontrada")
+
+    db.delete(zona)
+    db.commit()
+    return None
+
+@router.put("/sitios/{id}", response_model=SitioResponse)
+def editar_sitio_arqueologico(
+    id: int,
+    datos: SitioUpdate,
+    db: Session = Depends(get_db),
+    admin: Usuario = Depends(verificar_admin)
+):
+    sitio = db.query(SitioArqueologico).filter(
+        SitioArqueologico.id == id
+    ).first()
+    if not sitio:
+        raise HTTPException(status_code=404, detail="Sitio no encontrado")
+    if datos.nombre is not None:
+        sitio.nombre = datos.nombre
+    if datos.descripcion is not None:
+        sitio.descripcion = datos.descripcion
+    if datos.ubicacion is not None:
+        sitio.ubicacion = datos.ubicacion
+    if datos.imagen_url is not None:
+        sitio.imagen_url = datos.imagen_url
+    if datos.activo is not None:
+        sitio.activo = datos.activo
+    if datos.horario is not None:
+        sitio.horario = datos.horario
+    db.commit()
+    db.refresh(sitio)
+    return sitio
+
+
+@router.delete("/sitios/{id}", status_code=204)
+def eliminar_sitio_arqueologico(
+    id: int,
+    db: Session = Depends(get_db),
+    admin: Usuario = Depends(verificar_admin)
+):
+    sitio = db.query(SitioArqueologico).filter(
+        SitioArqueologico.id == id
+    ).first()
+    if not sitio:
+        raise HTTPException(status_code=404, detail="Sitio no encontrado")
+    db.delete(sitio)
+    db.commit()
+    return None
+
+@router.get("/qr/todos", response_model=List[QRListResponse])
+def listar_todos_codigos_qr(
+    db: Session = Depends(get_db),
+    admin: Usuario = Depends(verificar_admin)
+):
+    codigos = db.query(CodigoQR).all()
+    resultado = []
+    for qr in codigos:
+        zona = db.query(Zona).filter(Zona.id == qr.zona_id).first()
+        sitio = db.query(SitioArqueologico).filter(
+            SitioArqueologico.id == zona.sitio_id
+        ).first() if zona else None
+        resultado.append(QRListResponse(
+            id=qr.id,
+            zona_id=qr.zona_id,
+            codigo=qr.codigo,
+            url_destino=qr.url_destino,
+            activo=qr.activo,
+            creado_en=qr.creado_en,
+            nombre_zona=zona.nombre if zona else None,
+            nombre_sitio=sitio.nombre if sitio else None
+        ))
+    return resultado
+
+@router.get("/zonas/{id}/qr", response_model=QRResponse)
+def obtener_qr_zona(
+    id: int,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(obtener_usuario_token)
+):
+    zona = db.query(Zona).filter(Zona.id == id).first()
+    if not zona:
+        raise HTTPException(status_code=404, detail="Zona no encontrada")
+
+    qr = db.query(CodigoQR).filter(
+        CodigoQR.zona_id == id
+    ).first()
+
+    if not qr:
+        raise HTTPException(status_code=404, detail="No existe QR para esta zona")
+
     return qr

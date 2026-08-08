@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Quriy — Sistema Integral de Autoguiado Multimedia y Gestión Turística
 
 > Plataforma multicliente para recorridos autoguiados en sitios arqueológicos del Cusco
@@ -125,3 +126,12 @@ quriy/
 ---
 
 *Proyecto académico — UNSAAC 2026*
+
+# Quriy
+Sistema Integral de Autoguiado Multimedia y Gestión Turística
+
+## URL P�blica API
+https://quriy.onrender.com
+
+## Documentaci�n interactiva
+https://quriy.onrender.com/docs
