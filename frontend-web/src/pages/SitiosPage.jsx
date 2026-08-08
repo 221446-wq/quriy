@@ -83,7 +83,7 @@ function SitiosPage() {
   const menuItems = [
     { icono: "⊞", label: "Dashboard", ruta: "/dashboard" },
     { icono: "🏛️", label: "Sitios y Zonas", ruta: null, activo: true },
-    { icono: "🎧", label: "Contenido", ruta: null },
+    { icono: "🎧", label: "Contenido", ruta: "/audios" },
     { icono: "⬛", label: "Códigos QR", ruta: null },
     { icono: "📊", label: "Estadísticas", ruta: "/estadisticas" },
     { icono: "⭐", label: "Valoraciones", ruta: "/valoraciones" },

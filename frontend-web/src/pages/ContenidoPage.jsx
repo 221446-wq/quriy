@@ -182,7 +182,10 @@ function ContenidoPage() {
 
         <p style={estilos.menuSeccion}>HERRAMIENTAS</p>
         {menuItems.slice(2).map((item) => {
-          const ruta = item.label === "Valoraciones" ? "/valoraciones" : item.label === "Estadísticas" ? "/estadisticas" : null;
+          const ruta =
+            item.label === "Valoraciones" ? "/valoraciones" :
+            item.label === "Estadísticas" ? "/estadisticas" :
+            item.label === "Contenido" ? "/audios" : null;
           return (
             <div
               key={item.label}
