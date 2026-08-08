@@ -3,6 +3,7 @@ import LoginPage from "./pages/LoginPage";
 import SitiosPage from "./pages/SitiosPage";
 import ZonasPage from "./pages/ZonasPage";
 import ContenidoPage from "./pages/ContenidoPage";
+import ValoracionesPage from "./pages/ValoracionesPage";
 
 function RutaProtegida({ children }) {
   const token = localStorage.getItem("token");
@@ -36,6 +37,14 @@ function App() {
           element={
             <RutaProtegida>
               <ContenidoPage />
+            </RutaProtegida>
+          }
+        />
+        <Route
+          path="/valoraciones"
+          element={
+            <RutaProtegida>
+              <ValoracionesPage />
             </RutaProtegida>
           }
         />

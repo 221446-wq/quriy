@@ -185,6 +185,7 @@ function ContenidoPage() {
               ...estilos.menuItem,
               ...(item.activo ? estilos.menuItemActivo : {}),
             }}
+            onClick={item.label === "Valoraciones" ? () => navegar("/valoraciones") : undefined}
           >
             <span>{item.icono}</span>
             <span>{item.label}</span>

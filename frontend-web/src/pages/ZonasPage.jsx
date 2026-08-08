@@ -126,7 +126,11 @@ function ZonasPage() {
 
         <p style={estilos.menuSeccion}>HERRAMIENTAS</p>
         {menuItems.slice(2).map((item) => (
-          <div key={item.label} style={estilos.menuItem}>
+          <div
+            key={item.label}
+            style={estilos.menuItem}
+            onClick={item.label === "Valoraciones" ? () => navegar("/valoraciones") : undefined}
+          >
             <span>{item.icono}</span>
             <span>{item.label}</span>
           </div>
