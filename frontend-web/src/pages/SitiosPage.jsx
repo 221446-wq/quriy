@@ -212,7 +212,7 @@ function SitiosPage() {
                       ? `2px solid ${color.accent}`
                       : "2px solid transparent",
                   }}
-                  onClick={() => navegar(`/zonas/${sitioSeleccionado.id}`)}
+                  onClick={() => navegar(`/zonas/${sitio.id}`)}
                 >
                   <div
                     style={{
