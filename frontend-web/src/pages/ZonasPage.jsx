@@ -19,11 +19,34 @@ function ZonasPage() {
 
   useEffect(() => {
     let activo = true;
+    const precargarCodigosQR = async (listaZonas) => {
+      const resultados = await Promise.allSettled(
+        listaZonas.map((zona) => clienteHttp.get(`/zonas/${zona.id}/qr`))
+      );
+      const nuevosQR = {};
+      for (let i = 0; i < listaZonas.length; i++) {
+        const resultado = resultados[i];
+        if (resultado.status === "fulfilled") {
+          nuevosQR[listaZonas[i].id] = await QRCode.toDataURL(
+            resultado.value.data.url_destino,
+            { width: 200, margin: 2 }
+          );
+        }
+        // 404 = la zona aún no tiene QR generado, se ignora sin mostrar error
+      }
+      if (activo && Object.keys(nuevosQR).length > 0) {
+        setQrGenerado((prev) => ({ ...prev, ...nuevosQR }));
+      }
+    };
+
     const cargarZonas = async () => {
       setCargando(true);
       try {
         const respuesta = await clienteHttp.get(`/sitios/${idSitio}/zonas`);
-        if (activo) setZonas(respuesta.data);
+        if (activo) {
+          setZonas(respuesta.data);
+          precargarCodigosQR(respuesta.data);
+        }
       } catch {
         if (activo) setError("No se pudieron cargar las zonas.");
       } finally {

@@ -51,6 +51,8 @@ describe('ZonasPage', () => {
         { id: 2, nombre: 'Trono del Inca', descripcion: 'Zona central', orden: 2 },
       ],
     })
+    clienteHttp.get.mockRejectedValueOnce({ response: { status: 404 } })
+    clienteHttp.get.mockRejectedValueOnce({ response: { status: 404 } })
 
     renderZonasPage()
 
@@ -72,6 +74,7 @@ describe('ZonasPage', () => {
     clienteHttp.get.mockResolvedValueOnce({
       data: [{ id: 5, nombre: 'Templo del Sol', descripcion: 'Zona principal', orden: 1 }],
     })
+    clienteHttp.get.mockRejectedValueOnce({ response: { status: 404 } })
     clienteHttp.post.mockResolvedValueOnce({
       data: { id: 1, zona_id: 5, codigo: 'abc-123', url_destino: 'https://quriy.app/zonas/5' },
     })
@@ -91,6 +94,7 @@ describe('ZonasPage', () => {
     clienteHttp.get.mockResolvedValueOnce({
       data: [{ id: 5, nombre: 'Templo del Sol', descripcion: 'Zona principal', orden: 1 }],
     })
+    clienteHttp.get.mockRejectedValueOnce({ response: { status: 404 } })
     clienteHttp.post.mockResolvedValueOnce({
       data: { id: 1, zona_id: 5, codigo: 'abc-123', url_destino: 'https://quriy.app/zonas/5' },
     })
@@ -102,5 +106,29 @@ describe('ZonasPage', () => {
 
     const imagenQR = await screen.findByAltText('Código QR')
     expect(imagenQR).toBeInTheDocument()
+  })
+
+  it('precarga el QR existente al montar la página sin mostrar error si no existe', async () => {
+    const clienteHttp = (await import('../services/api')).default
+    clienteHttp.get.mockResolvedValueOnce({
+      data: [
+        { id: 5, nombre: 'Templo del Sol', descripcion: 'Zona principal', orden: 1 },
+        { id: 6, nombre: 'Plaza Mayor', descripcion: 'Zona secundaria', orden: 2 },
+      ],
+    })
+    clienteHttp.get.mockResolvedValueOnce({
+      data: { id: 1, zona_id: 5, codigo: 'abc-123', url_destino: 'https://quriy.app/zonas/5' },
+    })
+    clienteHttp.get.mockRejectedValueOnce({ response: { status: 404 } })
+
+    renderZonasPage()
+
+    await screen.findByText('Templo del Sol')
+
+    expect(await screen.findByAltText('Código QR')).toBeInTheDocument()
+    expect(clienteHttp.get).toHaveBeenCalledWith('/zonas/5/qr')
+    expect(clienteHttp.get).toHaveBeenCalledWith('/zonas/6/qr')
+    expect(screen.getByText('⬛ Generar QR')).toBeInTheDocument()
+    expect(screen.queryByText('No se pudo generar el QR.')).not.toBeInTheDocument()
   })
 })
