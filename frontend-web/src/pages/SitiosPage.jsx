@@ -81,12 +81,12 @@ function SitiosPage() {
   };
 
   const menuItems = [
-    { icono: "⊞", label: "Dashboard", ruta: null },
+    { icono: "⊞", label: "Dashboard", ruta: "/dashboard" },
     { icono: "🏛️", label: "Sitios y Zonas", ruta: null, activo: true },
     { icono: "🎧", label: "Contenido", ruta: null },
     { icono: "⬛", label: "Códigos QR", ruta: null },
     { icono: "📊", label: "Estadísticas", ruta: null },
-    { icono: "⭐", label: "Valoraciones", ruta: null },
+    { icono: "⭐", label: "Valoraciones", ruta: "/valoraciones" },
   ];
 
   return (
@@ -106,6 +106,7 @@ function SitiosPage() {
               ...estilos.menuItem,
               ...(item.activo ? estilos.menuItemActivo : {}),
             }}
+            onClick={item.ruta ? () => navegar(item.ruta) : undefined}
           >
             <span>{item.icono}</span>
             <span>{item.label}</span>
@@ -117,7 +118,7 @@ function SitiosPage() {
           <div
             key={item.label}
             style={estilos.menuItem}
-            onClick={item.label === "Valoraciones" ? () => navegar("/valoraciones") : undefined}
+            onClick={item.ruta ? () => navegar(item.ruta) : undefined}
           >
             <span>{item.icono}</span>
             <span>{item.label}</span>

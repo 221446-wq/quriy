@@ -110,19 +110,22 @@ function ZonasPage() {
         </div>
 
         <p style={estilos.menuSeccion}>PRINCIPAL</p>
-        {menuItems.slice(0, 2).map((item) => (
-          <div
-            key={item.label}
-            style={{
-              ...estilos.menuItem,
-              ...(item.activo ? estilos.menuItemActivo : {}),
-            }}
-            onClick={item.label === "Sitios y Zonas" ? () => navegar("/sitios") : undefined}
-          >
-            <span>{item.icono}</span>
-            <span>{item.label}</span>
-          </div>
-        ))}
+        {menuItems.slice(0, 2).map((item) => {
+          const ruta = item.label === "Dashboard" ? "/dashboard" : item.label === "Sitios y Zonas" ? "/sitios" : null;
+          return (
+            <div
+              key={item.label}
+              style={{
+                ...estilos.menuItem,
+                ...(item.activo ? estilos.menuItemActivo : {}),
+              }}
+              onClick={ruta ? () => navegar(ruta) : undefined}
+            >
+              <span>{item.icono}</span>
+              <span>{item.label}</span>
+            </div>
+          );
+        })}
 
         <p style={estilos.menuSeccion}>HERRAMIENTAS</p>
         {menuItems.slice(2).map((item) => (

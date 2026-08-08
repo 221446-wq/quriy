@@ -2,26 +2,34 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import clienteHttp from "../services/api";
 
-function ValoracionesPage() {
+const TARJETAS = [
+  { clave: "total_sitios", icono: "🏛️", label: "Sitios activos", color: "#2e8b57" },
+  { clave: "total_zonas", icono: "📍", label: "Zonas", color: "#2563eb" },
+  { clave: "total_usuarios", icono: "👥", label: "Usuarios activos", color: "#b59a00" },
+  { clave: "total_visitas", icono: "👣", label: "Visitas registradas", color: "#be185d" },
+  { clave: "total_qrs", icono: "⬛", label: "Códigos QR", color: "#555" },
+];
+
+function DashboardPage() {
   const navegar = useNavigate();
-  const [valoraciones, setValoraciones] = useState([]);
+  const [resumen, setResumen] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
     let activo = true;
-    const cargarValoraciones = async () => {
+    const cargarResumen = async () => {
       setCargando(true);
       try {
-        const respuesta = await clienteHttp.get("/valoraciones");
-        if (activo) setValoraciones(respuesta.data);
+        const respuesta = await clienteHttp.get("/estadisticas/resumen");
+        if (activo) setResumen(respuesta.data);
       } catch {
-        if (activo) setError("No se pudieron cargar las valoraciones.");
+        if (activo) setError("No se pudo cargar el resumen del sistema.");
       } finally {
         if (activo) setCargando(false);
       }
     };
-    cargarValoraciones();
+    cargarResumen();
     return () => { activo = false; };
   }, []);
 
@@ -30,22 +38,13 @@ function ValoracionesPage() {
     navegar("/");
   };
 
-  const formatearFecha = (timestamp) => {
-    if (!timestamp) return "—";
-    return new Date(timestamp).toLocaleDateString("es-PE", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  };
-
   const menuItems = [
-    { icono: "⊞", label: "Dashboard", ruta: "/dashboard" },
+    { icono: "⊞", label: "Dashboard", ruta: "/dashboard", activo: true },
     { icono: "🏛️", label: "Sitios y Zonas", ruta: "/sitios" },
     { icono: "🎧", label: "Contenido", ruta: null },
     { icono: "⬛", label: "Códigos QR", ruta: null },
     { icono: "📊", label: "Estadísticas", ruta: null },
-    { icono: "⭐", label: "Valoraciones", ruta: "/valoraciones", activo: true },
+    { icono: "⭐", label: "Valoraciones", ruta: "/valoraciones" },
   ];
 
   return (
@@ -95,61 +94,35 @@ function ValoracionesPage() {
       {/* CONTENIDO PRINCIPAL */}
       <main style={estilos.main}>
         <div style={estilos.header}>
-          <h1 style={estilos.tituloPagina}>Valoraciones</h1>
+          <h1 style={estilos.tituloPagina}>Dashboard</h1>
           <div style={estilos.avatar}>AM</div>
         </div>
 
         {error && <p style={estilos.error}>{error}</p>}
 
         {cargando ? (
-          <p style={{ color: "#666" }}>Cargando valoraciones...</p>
+          <p style={{ color: "#666" }}>Cargando resumen...</p>
         ) : (
-          <div style={estilos.tablaContenedor}>
-            <table style={estilos.tabla}>
-              <thead>
-                <tr>
-                  <th style={estilos.th}>CALIFICACIÓN</th>
-                  <th style={estilos.th}>COMENTARIO</th>
-                  <th style={estilos.th}>FECHA</th>
-                  <th style={estilos.th}>SITIO</th>
-                  <th style={estilos.th}>ZONA</th>
-                </tr>
-              </thead>
-              <tbody>
-                {valoraciones.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={5}
-                      style={{ ...estilos.td, color: "#aaa", textAlign: "center" }}
-                    >
-                      Sin valoraciones registradas
-                    </td>
-                  </tr>
-                ) : (
-                  valoraciones.map((valoracion) => (
-                    <tr key={valoracion.id}>
-                      <td style={estilos.td}>
-                        <span style={estilos.badgeCalificacion}>
-                          ⭐ {valoracion.calificacion ?? "—"}
-                        </span>
-                      </td>
-                      <td style={estilos.td}>
-                        {valoracion.comentario || "—"}
-                      </td>
-                      <td style={estilos.td}>
-                        {formatearFecha(valoracion.timestamp)}
-                      </td>
-                      <td style={estilos.td}>
-                        {valoracion.nombre_sitio || "—"}
-                      </td>
-                      <td style={estilos.td}>
-                        {valoracion.nombre_zona || "—"}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+          <div style={estilos.gridTarjetas}>
+            {TARJETAS.map((tarjeta) => (
+              <div key={tarjeta.clave} style={estilos.tarjeta}>
+                <div
+                  style={{
+                    ...estilos.tarjetaIcono,
+                    backgroundColor: `${tarjeta.color}1a`,
+                    color: tarjeta.color,
+                  }}
+                >
+                  {tarjeta.icono}
+                </div>
+                <div>
+                  <p style={estilos.tarjetaTotal}>
+                    {resumen?.[tarjeta.clave] ?? 0}
+                  </p>
+                  <p style={estilos.tarjetaLabel}>{tarjeta.label}</p>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </main>
@@ -248,39 +221,42 @@ const estilos = {
     fontSize: "12px",
     fontWeight: "700",
   },
-  tablaContenedor: {
+  gridTarjetas: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+    gap: "16px",
+  },
+  tarjeta: {
     backgroundColor: "white",
     borderRadius: "10px",
-    overflow: "hidden",
+    padding: "18px",
     boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
+    display: "flex",
+    alignItems: "center",
+    gap: "14px",
   },
-  tabla: {
-    width: "100%",
-    borderCollapse: "collapse",
-  },
-  th: {
-    padding: "10px 16px",
-    textAlign: "left",
-    fontSize: "11px",
-    color: "#999",
-    letterSpacing: "0.5px",
-    borderBottom: "1px solid #eee",
-  },
-  td: {
-    padding: "12px 16px",
-    fontSize: "13px",
-    borderBottom: "1px solid #f5f5f5",
-    color: "#333",
-  },
-  badgeCalificacion: {
-    backgroundColor: "#fef9c3",
-    color: "#b59a00",
-    padding: "2px 8px",
+  tarjetaIcono: {
+    width: "44px",
+    height: "44px",
     borderRadius: "10px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "20px",
+    flexShrink: 0,
+  },
+  tarjetaTotal: {
+    margin: 0,
+    fontSize: "24px",
+    fontWeight: "700",
+    color: "#1a1a1a",
+  },
+  tarjetaLabel: {
+    margin: 0,
     fontSize: "12px",
-    fontWeight: "600",
+    color: "#888",
   },
   error: { color: "#e74c3c", fontSize: "13px" },
 };
 
-export default ValoracionesPage;
+export default DashboardPage;
