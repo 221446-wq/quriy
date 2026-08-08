@@ -1,3 +1,6 @@
+import os
+
+
 def test_login_exitoso_retorna_jwt(client):
     response = client.post("/auth/login", json={
         "email": "admin@quriy.com",
@@ -74,3 +77,84 @@ def test_generar_qr_retorna_codigo_unico(client, token_admin):
     )
     assert qr_forzado.status_code == 201
     assert qr_forzado.json()["codigo"] != qr1.json()["codigo"]
+
+
+def test_subir_archivo_contenido_imagen_valida(client, token_admin):
+    response = client.post(
+        "/contenido/upload",
+        data={"tipo": "imagen"},
+        files={"archivo": ("foto.png", b"contenido-falso-png", "image/png")},
+        headers={"Authorization": f"Bearer {token_admin}"}
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["url_recurso"].startswith("/static/imagenes/")
+    assert data["url_recurso"].endswith(".png")
+
+    ruta_generada = os.path.join(os.path.dirname(__file__), "..", "app", data["url_recurso"].lstrip("/"))
+    if os.path.exists(ruta_generada):
+        os.remove(ruta_generada)
+
+
+def test_subir_archivo_extension_no_permitida_retorna_400(client, token_admin):
+    response = client.post(
+        "/contenido/upload",
+        data={"tipo": "imagen"},
+        files={"archivo": ("malicioso.exe", b"contenido", "application/octet-stream")},
+        headers={"Authorization": f"Bearer {token_admin}"}
+    )
+    assert response.status_code == 400
+
+
+def test_subir_archivo_sin_admin_retorna_403(client, token_turista):
+    response = client.post(
+        "/contenido/upload",
+        data={"tipo": "imagen"},
+        files={"archivo": ("foto.png", b"contenido", "image/png")},
+        headers={"Authorization": f"Bearer {token_turista}"}
+    )
+    assert response.status_code == 403
+
+
+def test_crear_editar_y_eliminar_contenido_de_zona(client, token_admin):
+    sitio = client.post(
+        "/sitios",
+        json={"nombre": "Choquequirao", "descripcion": "Sitio arqueológico"},
+        headers={"Authorization": f"Bearer {token_admin}"}
+    )
+    sitio_id = sitio.json()["id"]
+
+    zona = client.post(
+        f"/sitios/{sitio_id}/zonas",
+        json={"nombre": "Plaza principal", "orden": 1},
+        headers={"Authorization": f"Bearer {token_admin}"}
+    )
+    zona_id = zona.json()["id"]
+
+    creado = client.post(
+        f"/zonas/{zona_id}/contenido",
+        json={"tipo": "texto", "idioma": "es", "titulo": "Historia", "texto": "Reseña histórica"},
+        headers={"Authorization": f"Bearer {token_admin}"}
+    )
+    assert creado.status_code == 201
+    contenido_id = creado.json()["id"]
+
+    editado = client.put(
+        f"/contenido/{contenido_id}",
+        json={"texto": "Reseña histórica actualizada"},
+        headers={"Authorization": f"Bearer {token_admin}"}
+    )
+    assert editado.status_code == 200
+    assert editado.json()["texto"] == "Reseña histórica actualizada"
+
+    listado = client.get(
+        f"/zonas/{zona_id}/contenido",
+        headers={"Authorization": f"Bearer {token_admin}"}
+    )
+    assert len(listado.json()) == 1
+
+    eliminado = client.delete(
+        f"/contenido/{contenido_id}",
+        headers={"Authorization": f"Bearer {token_admin}"}
+    )
+    assert eliminado.status_code == 204
