@@ -42,7 +42,7 @@ function DashboardPage() {
     { icono: "⊞", label: "Dashboard", ruta: "/dashboard", activo: true },
     { icono: "🏛️", label: "Sitios y Zonas", ruta: "/sitios" },
     { icono: "🎧", label: "Contenido", ruta: "/audios" },
-    { icono: "⬛", label: "Códigos QR", ruta: null },
+    { icono: "⬛", label: "Códigos QR", ruta: "/qrs" },
     { icono: "📊", label: "Estadísticas", ruta: "/estadisticas" },
     { icono: "⭐", label: "Valoraciones", ruta: "/valoraciones" },
   ];

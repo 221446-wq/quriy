@@ -87,7 +87,7 @@ function AudiosPage() {
     { icono: "⊞", label: "Dashboard", ruta: "/dashboard" },
     { icono: "🏛️", label: "Sitios y Zonas", ruta: "/sitios" },
     { icono: "🎧", label: "Contenido", ruta: "/audios", activo: true },
-    { icono: "⬛", label: "Códigos QR", ruta: null },
+    { icono: "⬛", label: "Códigos QR", ruta: "/qrs" },
     { icono: "📊", label: "Estadísticas", ruta: "/estadisticas" },
     { icono: "⭐", label: "Valoraciones", ruta: "/valoraciones" },
   ];

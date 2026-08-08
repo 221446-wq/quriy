@@ -7,6 +7,7 @@ import ValoracionesPage from "./pages/ValoracionesPage";
 import DashboardPage from "./pages/DashboardPage";
 import EstadisticasPage from "./pages/EstadisticasPage";
 import AudiosPage from "./pages/AudiosPage";
+import QrsPage from "./pages/QrsPage";
 
 function RutaProtegida({ children }) {
   const token = localStorage.getItem("token");
@@ -72,6 +73,14 @@ function App() {
           element={
             <RutaProtegida>
               <AudiosPage />
+            </RutaProtegida>
+          }
+        />
+        <Route
+          path="/qrs"
+          element={
+            <RutaProtegida>
+              <QrsPage />
             </RutaProtegida>
           }
         />

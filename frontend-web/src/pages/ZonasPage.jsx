@@ -132,7 +132,8 @@ function ZonasPage() {
           const ruta =
             item.label === "Valoraciones" ? "/valoraciones" :
             item.label === "Estadísticas" ? "/estadisticas" :
-            item.label === "Contenido" ? "/audios" : null;
+            item.label === "Contenido" ? "/audios" :
+            item.label === "Códigos QR" ? "/qrs" : null;
           return (
             <div
               key={item.label}

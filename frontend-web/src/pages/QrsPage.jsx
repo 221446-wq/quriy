@@ -1,33 +1,74 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import QRCode from "qrcode";
 import clienteHttp from "../services/api";
 
-function ValoracionesPage() {
+function QrsPage() {
   const navegar = useNavigate();
-  const [valoraciones, setValoraciones] = useState([]);
+  const [qrs, setQrs] = useState([]);
+  const [imagenesQR, setImagenesQR] = useState({});
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
+  const [regenerandoId, setRegenerandoId] = useState(null);
+
+  const cargarQrs = async () => {
+    const respuesta = await clienteHttp.get("/qr/todos");
+    const lista = respuesta.data;
+    const imagenes = await Promise.all(
+      lista.map((qr) => QRCode.toDataURL(qr.url_destino, { width: 200, margin: 2 }))
+    );
+    const mapaImagenes = {};
+    lista.forEach((qr, i) => {
+      mapaImagenes[qr.zona_id] = imagenes[i];
+    });
+    setQrs(lista);
+    setImagenesQR(mapaImagenes);
+  };
 
   useEffect(() => {
     let activo = true;
-    const cargarValoraciones = async () => {
+    const inicializar = async () => {
       setCargando(true);
       try {
-        const respuesta = await clienteHttp.get("/valoraciones");
-        if (activo) setValoraciones(respuesta.data);
+        await cargarQrs();
       } catch {
-        if (activo) setError("No se pudieron cargar las valoraciones.");
+        if (activo) setError("No se pudo cargar la biblioteca de códigos QR.");
       } finally {
         if (activo) setCargando(false);
       }
     };
-    cargarValoraciones();
+    inicializar();
     return () => { activo = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const cerrarSesion = () => {
-    localStorage.removeItem("token");
-    navegar("/");
+  const regenerarQR = async (zonaId) => {
+    setRegenerandoId(zonaId);
+    setError("");
+    try {
+      await clienteHttp.post(`/zonas/${zonaId}/qr?forzar=true`);
+      await cargarQrs();
+    } catch {
+      setError("No se pudo regenerar el código QR.");
+    } finally {
+      setRegenerandoId(null);
+    }
+  };
+
+  const imprimirQR = (zonaId) => {
+    const imagenUrl = imagenesQR[zonaId];
+    if (!imagenUrl) return;
+    const ventana = window.open("", "_blank", "width=400,height=500");
+    if (!ventana) return;
+    ventana.document.write(`
+      <html>
+        <head><title>Código QR</title></head>
+        <body style="display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">
+          <img src="${imagenUrl}" style="width:300px;height:300px;" onload="window.print(); window.close();" />
+        </body>
+      </html>
+    `);
+    ventana.document.close();
   };
 
   const formatearFecha = (timestamp) => {
@@ -39,13 +80,18 @@ function ValoracionesPage() {
     });
   };
 
+  const cerrarSesion = () => {
+    localStorage.removeItem("token");
+    navegar("/");
+  };
+
   const menuItems = [
     { icono: "⊞", label: "Dashboard", ruta: "/dashboard" },
     { icono: "🏛️", label: "Sitios y Zonas", ruta: "/sitios" },
     { icono: "🎧", label: "Contenido", ruta: "/audios" },
-    { icono: "⬛", label: "Códigos QR", ruta: "/qrs" },
+    { icono: "⬛", label: "Códigos QR", ruta: "/qrs", activo: true },
     { icono: "📊", label: "Estadísticas", ruta: "/estadisticas" },
-    { icono: "⭐", label: "Valoraciones", ruta: "/valoraciones", activo: true },
+    { icono: "⭐", label: "Valoraciones", ruta: "/valoraciones" },
   ];
 
   return (
@@ -95,55 +141,89 @@ function ValoracionesPage() {
       {/* CONTENIDO PRINCIPAL */}
       <main style={estilos.main}>
         <div style={estilos.header}>
-          <h1 style={estilos.tituloPagina}>Valoraciones</h1>
+          <h1 style={estilos.tituloPagina}>Códigos QR</h1>
           <div style={estilos.avatar}>AM</div>
         </div>
 
         {error && <p style={estilos.error}>{error}</p>}
 
         {cargando ? (
-          <p style={{ color: "#666" }}>Cargando valoraciones...</p>
+          <p style={{ color: "#666" }}>Cargando códigos QR...</p>
         ) : (
           <div style={estilos.tablaContenedor}>
             <table style={estilos.tabla}>
               <thead>
                 <tr>
-                  <th style={estilos.th}>CALIFICACIÓN</th>
-                  <th style={estilos.th}>COMENTARIO</th>
-                  <th style={estilos.th}>FECHA</th>
+                  <th style={estilos.th}>QR</th>
                   <th style={estilos.th}>SITIO</th>
                   <th style={estilos.th}>ZONA</th>
+                  <th style={estilos.th}>CÓDIGO</th>
+                  <th style={estilos.th}>ESTADO</th>
+                  <th style={estilos.th}>CREADO</th>
+                  <th style={estilos.th}>ACCIONES</th>
                 </tr>
               </thead>
               <tbody>
-                {valoraciones.length === 0 ? (
+                {qrs.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={5}
+                      colSpan={7}
                       style={{ ...estilos.td, color: "#aaa", textAlign: "center" }}
                     >
-                      Sin valoraciones registradas
+                      Sin códigos QR registrados
                     </td>
                   </tr>
                 ) : (
-                  valoraciones.map((valoracion) => (
-                    <tr key={valoracion.id}>
+                  qrs.map((qr) => (
+                    <tr key={qr.id}>
                       <td style={estilos.td}>
-                        <span style={estilos.badgeCalificacion}>
-                          ⭐ {valoracion.calificacion ?? "—"}
+                        {imagenesQR[qr.zona_id] ? (
+                          <img
+                            src={imagenesQR[qr.zona_id]}
+                            alt="Código QR"
+                            style={{ width: "60px", height: "60px" }}
+                          />
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td style={estilos.td}>{qr.nombre_sitio || "—"}</td>
+                      <td style={estilos.td}>{qr.nombre_zona || "—"}</td>
+                      <td style={estilos.td}>{qr.codigo}</td>
+                      <td style={estilos.td}>
+                        <span
+                          style={{
+                            ...estilos.badgeEstado,
+                            ...(qr.activo ? {} : estilos.badgeInactivo),
+                          }}
+                        >
+                          {qr.activo ? "Activo" : "Inactivo"}
                         </span>
                       </td>
+                      <td style={estilos.td}>{formatearFecha(qr.creado_en)}</td>
                       <td style={estilos.td}>
-                        {valoracion.comentario || "—"}
-                      </td>
-                      <td style={estilos.td}>
-                        {formatearFecha(valoracion.timestamp)}
-                      </td>
-                      <td style={estilos.td}>
-                        {valoracion.nombre_sitio || "—"}
-                      </td>
-                      <td style={estilos.td}>
-                        {valoracion.nombre_zona || "—"}
+                        {imagenesQR[qr.zona_id] && (
+                          <a
+                            href={imagenesQR[qr.zona_id]}
+                            download={`qr-zona-${qr.zona_id}.png`}
+                            style={estilos.botonIcono}
+                          >
+                            ⬇️ Descargar
+                          </a>
+                        )}
+                        <button
+                          style={{ ...estilos.botonIcono, ...estilos.botonSinFondo }}
+                          onClick={() => imprimirQR(qr.zona_id)}
+                        >
+                          🖨️ Imprimir
+                        </button>
+                        <button
+                          style={{ ...estilos.botonIcono, ...estilos.botonSinFondo }}
+                          onClick={() => regenerarQR(qr.zona_id)}
+                          disabled={regenerandoId === qr.zona_id}
+                        >
+                          {regenerandoId === qr.zona_id ? "Regenerando..." : "🔁 Regenerar"}
+                        </button>
                       </td>
                     </tr>
                   ))
@@ -272,15 +352,32 @@ const estilos = {
     borderBottom: "1px solid #f5f5f5",
     color: "#333",
   },
-  badgeCalificacion: {
-    backgroundColor: "#fef9c3",
-    color: "#b59a00",
+  badgeEstado: {
+    backgroundColor: "#d4f5e2",
+    color: "#1a6645",
     padding: "2px 8px",
     borderRadius: "10px",
-    fontSize: "12px",
+    fontSize: "11px",
     fontWeight: "600",
+  },
+  badgeInactivo: {
+    backgroundColor: "#f0f0f0",
+    color: "#888",
+  },
+  botonIcono: {
+    display: "inline-block",
+    fontSize: "12px",
+    color: "#1a6645",
+    marginRight: "12px",
+    textDecoration: "none",
+  },
+  botonSinFondo: {
+    border: "none",
+    background: "none",
+    cursor: "pointer",
+    fontFamily: "inherit",
   },
   error: { color: "#e74c3c", fontSize: "13px" },
 };
 
-export default ValoracionesPage;
+export default QrsPage;
