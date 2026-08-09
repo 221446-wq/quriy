@@ -155,7 +155,7 @@ def poblar_base_de_datos():
         db.add(qr2)
         db.commit()
 
-        print("✅ Base de datos poblada exitosamente!")
+        print(" Base de datos poblada exitosamente!")
         print(f"   - Admin: admin@quriy.com / admin123")
         print(f"   - Turista: turista@quriy.com / turista123")
         print(f"   - Sitios: {db.query(SitioArqueologico).count()}")
@@ -168,3 +168,4 @@ def poblar_base_de_datos():
 
 if __name__ == "__main__":
     poblar_base_de_datos()
+
