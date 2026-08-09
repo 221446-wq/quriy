@@ -97,6 +97,9 @@ class ContenidoCreate(BaseModel):
     titulo: Optional[str] = None
     url_recurso: Optional[str] = None
 
+class ArchivoSubidoResponse(BaseModel):
+    url_recurso: str
+
 class ContenidoUpdate(BaseModel):
     tipo: Optional[str] = None
     idioma: Optional[str] = None

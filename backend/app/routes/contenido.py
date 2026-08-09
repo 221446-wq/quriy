@@ -1,11 +1,23 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+import os
+import uuid
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from typing import List
 from app.database import get_db
 from app.models.models import Contenido, Zona, Usuario
 from app.auth import verificar_token
-from app.schemas.schemas import ContenidoCreate, ContenidoUpdate, ContenidoResponse
+from app.schemas.schemas import ContenidoCreate, ContenidoUpdate, ContenidoResponse, ArchivoSubidoResponse
+
+DIRECTORIO_STATIC = os.path.join(os.path.dirname(__file__), "..", "static")
+EXTENSIONES_PERMITIDAS = {
+    "imagen": {".jpg", ".jpeg", ".png", ".webp", ".gif"},
+    "audio": {".mp3", ".wav", ".ogg", ".m4a"},
+}
+TAMANO_MAXIMO_BYTES = {
+    "imagen": 8 * 1024 * 1024,
+    "audio": 20 * 1024 * 1024,
+}
 
 router = APIRouter(tags=["Contenido Multimedia"])
 security = HTTPBearer()
@@ -37,6 +49,38 @@ def verificar_admin(usuario: Usuario = Depends(obtener_usuario_token)):
             detail="Solo administradores pueden realizar esta acción"
         )
     return usuario
+
+
+@router.post("/contenido/upload", response_model=ArchivoSubidoResponse, status_code=201)
+def subir_archivo_contenido(
+    tipo: str = Form(...),
+    archivo: UploadFile = File(...),
+    admin: Usuario = Depends(verificar_admin)
+):
+    if tipo not in EXTENSIONES_PERMITIDAS:
+        raise HTTPException(status_code=400, detail="El tipo debe ser 'imagen' o 'audio'")
+
+    extension = os.path.splitext(archivo.filename or "")[1].lower()
+    if extension not in EXTENSIONES_PERMITIDAS[tipo]:
+        permitidas = ", ".join(sorted(EXTENSIONES_PERMITIDAS[tipo]))
+        raise HTTPException(
+            status_code=400,
+            detail=f"Extensión no permitida para {tipo}. Usa: {permitidas}"
+        )
+
+    contenido_bytes = archivo.file.read()
+    if len(contenido_bytes) > TAMANO_MAXIMO_BYTES[tipo]:
+        raise HTTPException(status_code=400, detail="El archivo excede el tamaño máximo permitido")
+
+    subcarpeta = "imagenes" if tipo == "imagen" else "audio"
+    carpeta_destino = os.path.join(DIRECTORIO_STATIC, subcarpeta)
+    os.makedirs(carpeta_destino, exist_ok=True)
+
+    nombre_archivo = f"{uuid.uuid4().hex}{extension}"
+    with open(os.path.join(carpeta_destino, nombre_archivo), "wb") as destino:
+        destino.write(contenido_bytes)
+
+    return {"url_recurso": f"/static/{subcarpeta}/{nombre_archivo}"}
 
 
 @router.post("/zonas/{id}/contenido", response_model=ContenidoResponse, status_code=201)
