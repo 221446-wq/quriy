@@ -26,6 +26,19 @@ class ExcepcionCodigoQRInvalido implements Exception {
           'no corresponde a ninguna zona registrada';
 }
 
+/// Lanzada cuando falla el registro de una visita (red caída o backend
+/// respondió con error). A diferencia de las lecturas, esto SÍ se propaga
+/// a la UI en vez de caer a datos locales: fingir éxito en una escritura
+/// engañaría al turista haciéndole creer que su visita quedó registrada.
+class ExcepcionRegistrarVisita implements Exception {
+  final String mensaje;
+  const ExcepcionRegistrarVisita(
+      [this.mensaje = 'No se pudo registrar la visita']);
+
+  @override
+  String toString() => 'ExcepcionRegistrarVisita: $mensaje';
+}
+
 // ── Servicio principal ────────────────────────────────────────────────────────
 
 class ApiService {
@@ -182,6 +195,25 @@ class ApiService {
     return _instanciaProduccion.obtenerContenidoDeZonaInterno(zonaId);
   }
 
+  /// Las pantallas llaman esto: ApiService.registrarVisitaZona(...)
+  static Future<Map<String, dynamic>> registrarVisitaZona({
+    required int turistaId,
+    required int zonaId,
+    String idioma = 'es',
+    String? metodoAcceso,
+    double? calificacion,
+    String? comentario,
+  }) {
+    return _instanciaProduccion.registrarVisitaZonaInterno(
+      turistaId: turistaId,
+      zonaId: zonaId,
+      idioma: idioma,
+      metodoAcceso: metodoAcceso,
+      calificacion: calificacion,
+      comentario: comentario,
+    );
+  }
+
   // ══════════════════════════════════════════════════════════════
   // MÉTODOS DE INSTANCIA — estos sí se pueden mockear en pruebas
   // ══════════════════════════════════════════════════════════════
@@ -267,6 +299,47 @@ class ApiService {
     }
     await Future.delayed(const Duration(milliseconds: 500));
     return _contenidoPrueba(zonaId);
+  }
+
+  /// Registra la visita de un turista a una zona (POST /visitas-zona).
+  ///
+  /// Lanza [ExcepcionRegistrarVisita] si el backend no responde 201 o si
+  /// hay un error de red — a diferencia de las lecturas, acá no hay
+  /// fallback local: la pantalla debe enterarse y avisar al usuario.
+  Future<Map<String, dynamic>> registrarVisitaZonaInterno({
+    required int turistaId,
+    required int zonaId,
+    String idioma = 'es',
+    String? metodoAcceso,
+    double? calificacion,
+    String? comentario,
+  }) async {
+    try {
+      final headers = await _headersConToken();
+      final respuesta = await clienteHttp
+          .post(
+        Uri.parse('$baseUrl/visitas-zona'),
+        headers: headers,
+        body: jsonEncode({
+          'turista_id': turistaId,
+          'zona_id': zonaId,
+          'idioma': idioma,
+          'metodo_acceso': ?metodoAcceso,
+          'calificacion': ?calificacion,
+          'comentario': ?comentario,
+        }),
+      )
+          .timeout(const Duration(seconds: 4));
+
+      if (respuesta.statusCode == 201) {
+        return jsonDecode(respuesta.body);
+      }
+      throw const ExcepcionRegistrarVisita();
+    } catch (excepcion) {
+      if (excepcion is ExcepcionRegistrarVisita) rethrow;
+      throw const ExcepcionRegistrarVisita(
+          'No se pudo conectar con el servidor');
+    }
   }
 
   // ── QR — método de instancia directamente (sin estático) ──────

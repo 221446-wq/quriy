@@ -543,9 +543,7 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
         return SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
-            // TODO(Tarea 3): reemplazar por la llamada real a
-            // ApiService.registrarVisitaZona con estrellas + zona actual.
-            onPressed: _marcarComoVisitadaStub,
+            onPressed: _marcarComoVisitada,
             icon: const Icon(Icons.check),
             label: Text(esEs ? 'Marcar como visitada' : 'Mark as visited'),
             style: ElevatedButton.styleFrom(
@@ -560,13 +558,39 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
     }
   }
 
-  /// Placeholder temporal de la Tarea 2: solo demuestra los 3 estados
-  /// visuales. La Tarea 3 lo reemplaza por la llamada real al backend.
-  Future<void> _marcarComoVisitadaStub() async {
+  // TODO: turista_id hardcodeado a 1 (dato de prueba de seed.py) porque
+  // no existe ningún endpoint que resuelva el turista_id del usuario
+  // logueado a partir del token (Turista.id != Usuario.id). Reemplazar
+  // cuando el backend exponga esa relación.
+  static const int _turistaIdTemporal = 1;
+
+  Future<void> _marcarComoVisitada() async {
     setState(() => _estadoVisita = EstadoVisita.enviando);
-    await Future.delayed(const Duration(seconds: 1));
-    if (!mounted) return;
-    setState(() => _estadoVisita = EstadoVisita.visitada);
+    try {
+      await ApiService.registrarVisitaZona(
+        turistaId: _turistaIdTemporal,
+        zonaId: widget.zona.id,
+        idioma: _idiomaSeleccionado,
+        metodoAcceso: 'app',
+        calificacion: _calificacionSeleccionada > 0
+            ? _calificacionSeleccionada.toDouble()
+            : null,
+      );
+      if (!mounted) return;
+      setState(() => _estadoVisita = EstadoVisita.visitada);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _estadoVisita = EstadoVisita.noVisitada);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_idiomaSeleccionado == 'es'
+              ? 'No se pudo registrar la visita. Intenta de nuevo.'
+              : 'Could not register the visit. Please try again.'),
+          backgroundColor: const Color(0xFFDC2626),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   String _formatearDuracion(Duration d) {
