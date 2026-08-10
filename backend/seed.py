@@ -279,6 +279,8 @@ def poblar_base_de_datos():
                 "zonas": [
                     {
                         "nombre": "Catedral del Cusco",
+                        "latitud": -13.5161895,
+                        "longitud": -71.9804477,
                         "descripcion": (
                             "El templo mas importante de Cusco, construido sobre el "
                             "antiguo palacio del Inca Viracocha."
@@ -303,6 +305,8 @@ def poblar_base_de_datos():
                     },
                     {
                         "nombre": "Iglesia de la Compania de Jesus",
+                        "latitud": -13.5161895,
+                        "longitud": -71.9804477,
                         "descripcion": (
                             "Iglesia barroca construida sobre el palacio del Inca Huayna "
                             "Capac, famosa por su fachada de piedra tallada."
@@ -324,6 +328,8 @@ def poblar_base_de_datos():
                     },
                     {
                         "nombre": "Atrio y Pileta Central",
+                        "latitud": -13.5164398,
+                        "longitud": -71.9796431,
                         "descripcion": (
                             "Espacio central de la plaza, escenario historico de grandes "
                             "ceremonias incas y de la ejecucion de Tupac Amaru II."
@@ -344,6 +350,8 @@ def poblar_base_de_datos():
                     },
                     {
                         "nombre": "Portales y Arcos Coloniales",
+                        "latitud": -13.5165665,
+                        "longitud": -71.9793186,
                         "descripcion": (
                             "Galerias de arcos coloniales que rodean la plaza, con "
                             "restaurantes, tiendas y balcones de madera tallada."
@@ -366,6 +374,8 @@ def poblar_base_de_datos():
                     },
                     {
                         "nombre": "Plazoleta Regocijo",
+                        "latitud": -13.5171153,
+                        "longitud": -71.982688,
                         "descripcion": (
                             "La \"segunda plaza\" del Cusco, antigua Cusipata inca, hoy "
                             "sede de la Municipalidad."
@@ -407,6 +417,8 @@ def poblar_base_de_datos():
                 "zonas": [
                     {
                         "nombre": "La Piedra Principal",
+                        "latitud": -13.5160115,
+                        "longitud": -71.9788492,
                         "descripcion": (
                             "El bloque de piedra con sus famosos 12 angulos, simbolo "
                             "del ingenio arquitectonico inca."
@@ -430,6 +442,8 @@ def poblar_base_de_datos():
                     },
                     {
                         "nombre": "Muro Inca de Hatun Rumiyoc",
+                        "latitud": -13.5158197,
+                        "longitud": -71.9966226,
                         "descripcion": (
                             "El extenso muro del antiguo Palacio del Inca Roca, con "
                             "piedras poligonales ensambladas sin mortero."
@@ -451,6 +465,8 @@ def poblar_base_de_datos():
                     },
                     {
                         "nombre": "Palacio Arzobispal y Museo de Arte Religioso",
+                        "latitud": -13.516129,
+                        "longitud": -71.9797775,
                         "descripcion": (
                             "Edificio colonial construido sobre el Palacio del Inca "
                             "Roca, hoy Museo de Arte Religioso del Cusco."
@@ -472,6 +488,8 @@ def poblar_base_de_datos():
                     },
                     {
                         "nombre": "Calle Hatun Rumiyoc (Recorrido)",
+                        "latitud": -13.5158206,
+                        "longitud": -71.9785978,
                         "descripcion": (
                             "Calle empedrada que conecta la Plaza de Armas con la "
                             "Piedra de los 12 Angulos, flanqueada por muros incas."
@@ -516,6 +534,8 @@ def poblar_base_de_datos():
                 "zonas": [
                     {
                         "nombre": "Anfiteatro Semicircular",
+                        "latitud": -13.5088804,
+                        "longitud": -71.9706415,
                         "descripcion": (
                             "Espacio ceremonial semicircular con un gran monolito "
                             "central y acustica excepcional."
@@ -538,6 +558,8 @@ def poblar_base_de_datos():
                     },
                     {
                         "nombre": "Canales en Zigzag",
+                        "latitud": -13.5088804,
+                        "longitud": -71.9706415,
                         "descripcion": (
                             "Canales tallados en la roca que simbolizan a la serpiente "
                             "sagrada, usados en rituales de libacion."
@@ -559,6 +581,8 @@ def poblar_base_de_datos():
                     },
                     {
                         "nombre": "Camara Subterranea (Altar de Sacrificios)",
+                        "latitud": -13.5088804,
+                        "longitud": -71.9706415,
                         "descripcion": (
                             "Espacio subterraneo tallado en roca, asociado a "
                             "momificaciones y sacrificios rituales."
@@ -580,6 +604,8 @@ def poblar_base_de_datos():
                     },
                     {
                         "nombre": "Tallas y Simbolos en Roca",
+                        "latitud": -13.5088804,
+                        "longitud": -71.9706415,
                         "descripcion": (
                             "Figuras talladas de condor, puma y serpiente que "
                             "representan la triada sagrada andina."
@@ -599,6 +625,8 @@ def poblar_base_de_datos():
                     },
                     {
                         "nombre": "Monolito Central",
+                        "latitud": -13.5088804,
+                        "longitud": -71.9706415,
                         "descripcion": (
                             "Gran bloque de piedra en el centro del anfiteatro, "
                             "posiblemente una deidad con rasgos de felino."
@@ -642,6 +670,8 @@ def poblar_base_de_datos():
                 "zonas": [
                     {
                         "nombre": "Estatua del Cristo Blanco",
+                        "latitud": -13.5096406,
+                        "longitud": -71.9806908,
                         "descripcion": (
                             "Estatua de 8 metros donada por la comunidad "
                             "arabe-palestina, simbolo de sincretismo religioso."
@@ -662,6 +692,8 @@ def poblar_base_de_datos():
                     },
                     {
                         "nombre": "Mirador Principal",
+                        "latitud": -13.5095354,
+                        "longitud": -71.978299,
                         "descripcion": (
                             "Punto panoramico con una de las mejores vistas de toda la "
                             "ciudad de Cusco."
@@ -682,6 +714,8 @@ def poblar_base_de_datos():
                     },
                     {
                         "nombre": "Cerro Pukamoqo (Area Inca)",
+                        "latitud": -13.5097635,
+                        "longitud": -71.9882578,
                         "descripcion": (
                             "Cerro sagrado vinculado a la Pachamama, con caminos "
                             "ancestrales hacia Sacsayhuaman."
@@ -701,6 +735,8 @@ def poblar_base_de_datos():
                     },
                     {
                         "nombre": "Mirador de Sacsayhuaman (Conexion)",
+                        "latitud": -13.509856,
+                        "longitud": -71.9842627,
                         "descripcion": (
                             "Mirador cercano al Cristo Blanco con vista directa a la "
                             "fortaleza inca de Sacsayhuaman."
@@ -743,8 +779,8 @@ def poblar_base_de_datos():
                     nombre=zona_info["nombre"],
                     descripcion=zona_info["descripcion"],
                     orden=orden,
-                    latitud=sitio_info["latitud"],
-                    longitud=sitio_info["longitud"],
+                    latitud=zona_info.get("latitud", sitio_info["latitud"]),
+                    longitud=zona_info.get("longitud", sitio_info["longitud"]),
                     activa=True
                 )
                 db.add(zona)
