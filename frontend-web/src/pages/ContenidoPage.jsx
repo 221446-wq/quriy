@@ -34,6 +34,7 @@ function ContenidoPage() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
   const [guardando, setGuardando] = useState(false);
+  const [generandoAudio, setGenerandoAudio] = useState(false);
   const [idiomaActivo, setIdiomaActivo] = useState("es");
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [formulario, setFormulario] = useState(FORMULARIO_VACIO);
@@ -125,6 +126,30 @@ function ContenidoPage() {
       setError("No se pudo guardar el contenido.");
     } finally {
       setGuardando(false);
+    }
+  };
+
+  const generarAudioIA = async () => {
+    if (!formulario.texto || !formulario.texto.trim()) {
+      setError("Escribe primero el texto que quieres convertir en audio.");
+      return;
+    }
+    setGenerandoAudio(true);
+    setError("");
+    try {
+      const respuesta = await clienteHttp.post("/contenido/generar-audio", {
+        texto: formulario.texto,
+        idioma: formulario.idioma,
+      });
+      setFormulario({
+        ...formulario,
+        archivo: null,
+        urlRecursoExistente: respuesta.data.url_recurso,
+      });
+    } catch {
+      setError("No se pudo generar el audio con IA. Intenta de nuevo en unos segundos.");
+    } finally {
+      setGenerandoAudio(false);
     }
   };
 
@@ -321,6 +346,31 @@ function ContenidoPage() {
                     value={formulario.texto}
                     onChange={(e) => setFormulario({ ...formulario, texto: e.target.value })}
                   />
+
+                  {formulario.tipo === "audio" && (
+                    <>
+                      <button
+                        type="button"
+                        style={{
+                          ...estilos.botonNuevo,
+                          width: "100%",
+                          marginTop: "8px",
+                          opacity: generandoAudio ? 0.7 : 1,
+                        }}
+                        onClick={generarAudioIA}
+                        disabled={generandoAudio}
+                      >
+                        {generandoAudio
+                          ? "Generando audio..."
+                          : "🎙️ Generar audio con IA"}
+                      </button>
+                      <p style={{ fontSize: "12px", color: "#888", marginTop: "4px" }}>
+                        Usa el texto de arriba como guion y genera un archivo
+                        de audio automáticamente. Reemplaza el archivo
+                        seleccionado manualmente, si lo hubiera.
+                      </p>
+                    </>
+                  )}
                 </>
               )}
 
