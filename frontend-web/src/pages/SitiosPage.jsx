@@ -18,10 +18,19 @@ function SitiosPage() {
   const [sitioSeleccionado, setSitioSeleccionado] = useState(null);
   const [zonas, setZonas] = useState([]);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [sitioEditando, setSitioEditando] = useState(null);
   const [nuevoSitio, setNuevoSitio] = useState({
     nombre: "",
     ubicacion: "",
     descripcion: "",
+  });
+  const [mostrarFormularioZona, setMostrarFormularioZona] = useState(false);
+  const [zonaEditando, setZonaEditando] = useState(null);
+  const [formZona, setFormZona] = useState({
+    nombre: "",
+    descripcion: "",
+    latitud: "",
+    longitud: "",
   });
   const navegar = useNavigate();
 
@@ -64,14 +73,92 @@ function SitiosPage() {
     return () => { activo = false; };
   }, [sitioSeleccionado]);
 
-  const crearSitio = async () => {
+  const abrirNuevoSitio = () => {
+    setSitioEditando(null);
+    setNuevoSitio({ nombre: "", ubicacion: "", descripcion: "" });
+    setMostrarFormulario(true);
+  };
+
+  const abrirEdicionSitio = (sitio, evento) => {
+    evento.stopPropagation();
+    setSitioEditando(sitio.id);
+    setNuevoSitio({
+      nombre: sitio.nombre,
+      ubicacion: sitio.ubicacion || "",
+      descripcion: sitio.descripcion || "",
+    });
+    setMostrarFormulario(true);
+  };
+
+  const cerrarFormularioSitio = () => {
+    setMostrarFormulario(false);
+    setSitioEditando(null);
+    setNuevoSitio({ nombre: "", ubicacion: "", descripcion: "" });
+  };
+
+  const guardarSitio = async () => {
     try {
-      await clienteHttp.post("/sitios", nuevoSitio);
-      setMostrarFormulario(false);
-      setNuevoSitio({ nombre: "", ubicacion: "", descripcion: "" });
+      if (sitioEditando) {
+        await clienteHttp.put(`/sitios/${sitioEditando}`, nuevoSitio);
+      } else {
+        await clienteHttp.post("/sitios", nuevoSitio);
+      }
+      cerrarFormularioSitio();
       window.location.reload();
     } catch {
-      setError("No se pudo crear el sitio.");
+      setError(sitioEditando ? "No se pudo actualizar el sitio." : "No se pudo crear el sitio.");
+    }
+  };
+
+  const eliminarSitio = async (id, evento) => {
+    evento.stopPropagation();
+    if (!window.confirm("¿Eliminar este sitio? Esta acción no se puede deshacer.")) return;
+    try {
+      await clienteHttp.delete(`/sitios/${id}`);
+      window.location.reload();
+    } catch {
+      setError("No se pudo eliminar el sitio.");
+    }
+  };
+
+  const abrirEdicionZona = (zona) => {
+    setZonaEditando(zona.id);
+    setFormZona({
+      nombre: zona.nombre,
+      descripcion: zona.descripcion || "",
+      latitud: zona.latitud ?? "",
+      longitud: zona.longitud ?? "",
+    });
+    setMostrarFormularioZona(true);
+  };
+
+  const cerrarFormularioZona = () => {
+    setMostrarFormularioZona(false);
+    setZonaEditando(null);
+    setFormZona({ nombre: "", descripcion: "", latitud: "", longitud: "" });
+  };
+
+  const guardarZona = async () => {
+    try {
+      await clienteHttp.put(`/zonas/${zonaEditando}`, {
+        ...formZona,
+        latitud: formZona.latitud === "" ? null : parseFloat(formZona.latitud),
+        longitud: formZona.longitud === "" ? null : parseFloat(formZona.longitud),
+      });
+      cerrarFormularioZona();
+      window.location.reload();
+    } catch {
+      setError("No se pudo actualizar la zona.");
+    }
+  };
+
+  const eliminarZona = async (id) => {
+    if (!window.confirm("¿Eliminar esta zona? Esta acción no se puede deshacer.")) return;
+    try {
+      await clienteHttp.delete(`/zonas/${id}`);
+      window.location.reload();
+    } catch {
+      setError("No se pudo eliminar la zona.");
     }
   };
 
@@ -138,7 +225,7 @@ function SitiosPage() {
           <div style={estilos.headerDerecha}>
             <button
               style={estilos.botonNuevo}
-              onClick={() => setMostrarFormulario(true)}
+              onClick={abrirNuevoSitio}
             >
               + Nuevo sitio
             </button>
@@ -152,7 +239,9 @@ function SitiosPage() {
         {mostrarFormulario && (
           <div style={estilos.modalOverlay}>
             <div style={estilos.modal}>
-              <h3 style={{ marginTop: 0, color: "#1a6645" }}>Nuevo Sitio</h3>
+              <h3 style={{ marginTop: 0, color: "#1a6645" }}>
+                {sitioEditando ? "Editar Sitio" : "Nuevo Sitio"}
+              </h3>
               <label style={estilos.label}>Nombre</label>
               <input
                 style={estilos.input}
@@ -181,12 +270,68 @@ function SitiosPage() {
                 }
               />
               <div style={{ display: "flex", gap: "10px", marginTop: "8px" }}>
-                <button style={estilos.botonNuevo} onClick={crearSitio}>
+                <button style={estilos.botonNuevo} onClick={guardarSitio}>
                   Guardar
                 </button>
                 <button
                   style={estilos.botonCancelar}
-                  onClick={() => setMostrarFormulario(false)}
+                  onClick={cerrarFormularioSitio}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal edición de zona */}
+        {mostrarFormularioZona && (
+          <div style={estilos.modalOverlay}>
+            <div style={estilos.modal}>
+              <h3 style={{ marginTop: 0, color: "#1a6645" }}>Editar Zona</h3>
+              <label style={estilos.label}>Nombre</label>
+              <input
+                style={estilos.input}
+                placeholder="Ej. Templo del Sol"
+                value={formZona.nombre}
+                onChange={(e) =>
+                  setFormZona({ ...formZona, nombre: e.target.value })
+                }
+              />
+              <label style={estilos.label}>Descripción</label>
+              <input
+                style={estilos.input}
+                placeholder="Breve descripción de la zona"
+                value={formZona.descripcion}
+                onChange={(e) =>
+                  setFormZona({ ...formZona, descripcion: e.target.value })
+                }
+              />
+              <label style={estilos.label}>Latitud</label>
+              <input
+                style={estilos.input}
+                placeholder="Ej. -13.5170"
+                value={formZona.latitud}
+                onChange={(e) =>
+                  setFormZona({ ...formZona, latitud: e.target.value })
+                }
+              />
+              <label style={estilos.label}>Longitud</label>
+              <input
+                style={estilos.input}
+                placeholder="Ej. -71.9785"
+                value={formZona.longitud}
+                onChange={(e) =>
+                  setFormZona({ ...formZona, longitud: e.target.value })
+                }
+              />
+              <div style={{ display: "flex", gap: "10px", marginTop: "8px" }}>
+                <button style={estilos.botonNuevo} onClick={guardarZona}>
+                  Guardar
+                </button>
+                <button
+                  style={estilos.botonCancelar}
+                  onClick={cerrarFormularioZona}
                 >
                   Cancelar
                 </button>
@@ -226,6 +371,20 @@ function SitiosPage() {
                     }}
                   >
                     <span style={{ fontSize: "36px" }}>{emoji}</span>
+                    <div style={estilos.cardAcciones}>
+                      <button
+                        style={estilos.botonIconoCard}
+                        onClick={(e) => abrirEdicionSitio(sitio, e)}
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        style={{ ...estilos.botonIconoCard, color: "#e74c3c" }}
+                        onClick={(e) => eliminarSitio(sitio.id, e)}
+                      >
+                        🗑
+                      </button>
+                    </div>
                   </div>
                   <div style={estilos.cardInfo}>
                     <p style={estilos.cardNombre}>{sitio.nombre}</p>
@@ -280,11 +439,14 @@ function SitiosPage() {
                       <td style={estilos.td}>
                         <button
                           style={estilos.botonIcono}
-                          onClick={() => navegar(`/zonas/${sitioSeleccionado.id}`)}
+                          onClick={() => abrirEdicionZona(zona)}
                         >
                           ✏️
                         </button>
-                        <button style={{ ...estilos.botonIcono, color: "#e74c3c" }}>
+                        <button
+                          style={{ ...estilos.botonIcono, color: "#e74c3c" }}
+                          onClick={() => eliminarZona(zona.id)}
+                        >
                           🗑
                         </button>
                       </td>
@@ -431,10 +593,27 @@ const estilos = {
     transition: "transform 0.15s",
   },
   cardImagen: {
+    position: "relative",
     height: "80px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+  },
+  cardAcciones: {
+    position: "absolute",
+    top: "4px",
+    right: "4px",
+    display: "flex",
+    gap: "2px",
+  },
+  botonIconoCard: {
+    background: "rgba(255,255,255,0.85)",
+    border: "none",
+    borderRadius: "4px",
+    cursor: "pointer",
+    fontSize: "12px",
+    padding: "3px 5px",
+    lineHeight: 1,
   },
   cardInfo: {
     padding: "10px 14px 12px",
