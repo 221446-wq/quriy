@@ -8,6 +8,25 @@ import uuid
 
 Base.metadata.create_all(bind=engine)
 
+# ============================================================
+# IMAGENES DE PORTADA POR SITIO (Cloudinary - permanentes)
+# ------------------------------------------------------------
+# Sube la foto de cada sitio UNA VEZ desde el panel (Sitios y
+# Zonas -> icono de camara). Cloudinary te va a mostrar/guardar
+# una URL parecida a:
+#   https://res.cloudinary.com/tu-cuenta/image/upload/v123/quriy/xxxx.jpg
+# Copia esa URL y pegala aqui, en el sitio que corresponda.
+# Si la dejas como cadena vacia "", el sitio simplemente no
+# tendra imagen hasta que la agregues.
+# ============================================================
+IMAGENES_SITIOS = {
+    "Qorikancha - Templo del Sol": "",
+    "Plaza de Armas del Cusco": "",
+    "Piedra de los 12 Angulos": "",
+    "Qenqo": "",
+    "Cristo Blanco": "",
+}
+
 
 def poblar_base_de_datos():
     db = SessionLocal()
@@ -706,11 +725,13 @@ def poblar_base_de_datos():
         # INSERCION EN BASE DE DATOS
         # ============================================================
         for sitio_info in sitios_data:
+            imagen_url = IMAGENES_SITIOS.get(sitio_info["nombre"]) or None
             sitio = SitioArqueologico(
                 nombre=sitio_info["nombre"],
                 descripcion=sitio_info["descripcion"],
                 ubicacion=sitio_info["ubicacion"],
                 horario=sitio_info["horario"],
+                imagen_url=imagen_url,
                 activo=True
             )
             db.add(sitio)

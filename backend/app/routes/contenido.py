@@ -8,6 +8,8 @@ from gtts import gTTS
 from gtts.tts import gTTSError
 from deep_translator import GoogleTranslator
 from deep_translator.exceptions import RequestError as TraduccionRequestError
+import cloudinary
+import cloudinary.uploader
 from app.database import get_db
 from app.models.models import Contenido, Zona, Usuario
 from app.auth import verificar_token
@@ -16,6 +18,26 @@ from app.schemas.schemas import (
     GenerarAudioRequest, GenerarAudioResponse,
     TraducirRequest, TraducirResponse,
 )
+
+# ============================================================
+# CLOUDINARY (almacenamiento permanente de imagenes, gratis)
+# Se configura solo si las 3 variables de entorno existen. Si no
+# existen (por ejemplo en desarrollo local sin cuenta configurada),
+# se usa el guardado local como respaldo (comportamiento anterior).
+# ============================================================
+CLOUDINARY_ACTIVO = bool(
+    os.getenv("CLOUDINARY_CLOUD_NAME")
+    and os.getenv("CLOUDINARY_API_KEY")
+    and os.getenv("CLOUDINARY_API_SECRET")
+)
+
+if CLOUDINARY_ACTIVO:
+    cloudinary.config(
+        cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+        api_key=os.getenv("CLOUDINARY_API_KEY"),
+        api_secret=os.getenv("CLOUDINARY_API_SECRET"),
+        secure=True,
+    )
 
 DIRECTORIO_STATIC = os.path.join(os.path.dirname(__file__), "..", "static")
 EXTENSIONES_PERMITIDAS = {
@@ -79,6 +101,22 @@ def subir_archivo_contenido(
     contenido_bytes = archivo.file.read()
     if len(contenido_bytes) > TAMANO_MAXIMO_BYTES[tipo]:
         raise HTTPException(status_code=400, detail="El archivo excede el tamaño máximo permitido")
+
+    # Las imagenes van a Cloudinary (permanente) si esta configurado.
+    # El audio sigue guardandose local por ahora (no se pidio persistencia para audio todavia).
+    if tipo == "imagen" and CLOUDINARY_ACTIVO:
+        try:
+            resultado = cloudinary.uploader.upload(
+                contenido_bytes,
+                folder="quriy",
+                resource_type="image",
+            )
+            return {"url_recurso": resultado["secure_url"]}
+        except Exception as error:
+            raise HTTPException(
+                status_code=502,
+                detail=f"No se pudo subir la imagen a Cloudinary: {error}"
+            )
 
     subcarpeta = "imagenes" if tipo == "imagen" else "audio"
     carpeta_destino = os.path.join(DIRECTORIO_STATIC, subcarpeta)
