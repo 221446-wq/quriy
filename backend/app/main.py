@@ -5,8 +5,10 @@ from fastapi.staticfiles import StaticFiles
 from app.database import engine, Base
 from app.models import models
 from app.routes import auth, sitios, contenido, recorridos, visitas, estadisticas
+from seed import poblar_base_de_datos
 
 Base.metadata.create_all(bind=engine)
+poblar_base_de_datos()
 
 app = FastAPI(
     title="Quriy API",
@@ -22,6 +24,7 @@ CORS_ORIGINS = os.getenv(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
