@@ -5,8 +5,10 @@ from fastapi.staticfiles import StaticFiles
 from app.database import engine, Base
 from app.models import models
 from app.routes import auth, sitios, contenido, recorridos, visitas, estadisticas
+from seed import poblar_base_de_datos
 
 Base.metadata.create_all(bind=engine)
+poblar_base_de_datos()
 
 app = FastAPI(
     title="Quriy API",
