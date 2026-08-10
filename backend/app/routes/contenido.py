@@ -4,10 +4,18 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File,
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from typing import List
+from gtts import gTTS
+from gtts.tts import gTTSError
+from deep_translator import GoogleTranslator
+from deep_translator.exceptions import RequestError as TraduccionRequestError
 from app.database import get_db
 from app.models.models import Contenido, Zona, Usuario
 from app.auth import verificar_token
-from app.schemas.schemas import ContenidoCreate, ContenidoUpdate, ContenidoResponse, ArchivoSubidoResponse
+from app.schemas.schemas import (
+    ContenidoCreate, ContenidoUpdate, ContenidoResponse, ArchivoSubidoResponse,
+    GenerarAudioRequest, GenerarAudioResponse,
+    TraducirRequest, TraducirResponse,
+)
 
 DIRECTORIO_STATIC = os.path.join(os.path.dirname(__file__), "..", "static")
 EXTENSIONES_PERMITIDAS = {
@@ -164,3 +172,107 @@ def listar_biblioteca_audios(
 
     audios = query.order_by(Contenido.id.desc()).all()
     return audios
+
+# ============================================================
+# GENERACION DE AUDIO CON IA (gTTS) - Issue #93
+# ============================================================
+# Idiomas soportados por gTTS que usa este proyecto (es/en).
+IDIOMAS_TTS_VALIDOS = {"es", "en"}
+
+
+@router.post("/contenido/generar-audio", response_model=GenerarAudioResponse, status_code=201)
+def generar_audio_con_ia(
+    datos: GenerarAudioRequest,
+    admin: Usuario = Depends(verificar_admin)
+):
+    """
+    Recibe un texto (por ejemplo, el guion de una audioguia) y devuelve
+    la URL de un archivo de audio MP3 generado automaticamente con IA
+    (gTTS - Google Text-to-Speech, gratuito, sin API key).
+    """
+    if not datos.texto or not datos.texto.strip():
+        raise HTTPException(status_code=400, detail="El texto no puede estar vacio")
+
+    if len(datos.texto) > 5000:
+        raise HTTPException(
+            status_code=400,
+            detail="El texto no puede superar los 5000 caracteres por generacion"
+        )
+
+    if datos.idioma not in IDIOMAS_TTS_VALIDOS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Idioma no soportado. Usa: {', '.join(sorted(IDIOMAS_TTS_VALIDOS))}"
+        )
+
+    subcarpeta = "audio"
+    carpeta_destino = os.path.join(DIRECTORIO_STATIC, subcarpeta)
+    os.makedirs(carpeta_destino, exist_ok=True)
+
+    nombre_archivo = f"ia_{uuid.uuid4().hex}.mp3"
+    ruta_completa = os.path.join(carpeta_destino, nombre_archivo)
+
+    try:
+        audio = gTTS(text=datos.texto, lang=datos.idioma, slow=False)
+        audio.save(ruta_completa)
+    except gTTSError as error:
+        raise HTTPException(
+            status_code=502,
+            detail=f"No se pudo generar el audio con el servicio de IA: {error}"
+        )
+    except Exception as error:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Error inesperado generando el audio: {error}"
+        )
+
+    return {"url_recurso": f"/static/{subcarpeta}/{nombre_archivo}"}
+
+
+# ============================================================
+# TRADUCCION AUTOMATICA ES -> EN (deep-translator) - Issue #93
+# ============================================================
+IDIOMAS_TRADUCCION_VALIDOS = {"es", "en"}
+
+
+@router.post("/contenido/traducir", response_model=TraducirResponse)
+def traducir_texto_con_ia(
+    datos: TraducirRequest,
+    admin: Usuario = Depends(verificar_admin)
+):
+    """
+    Traduce un texto de forma automatica (por defecto espanol -> ingles)
+    usando deep-translator (gratuito, sin API key). Pensado para generar
+    rapidamente la version en ingles del guion de una audioguia.
+    """
+    if not datos.texto or not datos.texto.strip():
+        raise HTTPException(status_code=400, detail="El texto no puede estar vacio")
+
+    if datos.idioma_origen not in IDIOMAS_TRADUCCION_VALIDOS:
+        raise HTTPException(status_code=400, detail="Idioma de origen no soportado")
+    if datos.idioma_destino not in IDIOMAS_TRADUCCION_VALIDOS:
+        raise HTTPException(status_code=400, detail="Idioma de destino no soportado")
+    if datos.idioma_origen == datos.idioma_destino:
+        raise HTTPException(
+            status_code=400,
+            detail="El idioma de origen y destino no pueden ser el mismo"
+        )
+
+    try:
+        traductor = GoogleTranslator(
+            source=datos.idioma_origen,
+            target=datos.idioma_destino
+        )
+        texto_traducido = traductor.translate(datos.texto)
+    except TraduccionRequestError as error:
+        raise HTTPException(
+            status_code=502,
+            detail=f"No se pudo contactar el servicio de traduccion: {error}"
+        )
+    except Exception as error:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Error inesperado traduciendo el texto: {error}"
+        )
+
+    return {"texto_traducido": texto_traducido}

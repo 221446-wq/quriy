@@ -225,3 +225,18 @@ class QRListResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
+class GenerarAudioRequest(BaseModel):
+    texto: str
+    idioma: str = "es"
+
+class GenerarAudioResponse(BaseModel):
+    url_recurso: str
+
+class TraducirRequest(BaseModel):
+    texto: str
+    idioma_origen: str = "es"
+    idioma_destino: str = "en"
+
+class TraducirResponse(BaseModel):
+    texto_traducido: str
