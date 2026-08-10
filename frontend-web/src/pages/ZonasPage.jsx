@@ -9,6 +9,7 @@ function ZonasPage() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [zonaEditando, setZonaEditando] = useState(null);
   const [nuevaZona, setNuevaZona] = useState({
     nombre: "",
     descripcion: "",
@@ -57,18 +58,55 @@ function ZonasPage() {
     return () => { activo = false; };
   }, [idSitio]);
 
-  const crearZona = async () => {
+  const abrirNuevaZona = () => {
+    setZonaEditando(null);
+    setNuevaZona({ nombre: "", descripcion: "", latitud: "", longitud: "" });
+    setMostrarFormulario(true);
+  };
+
+  const abrirEdicionZona = (zona) => {
+    setZonaEditando(zona.id);
+    setNuevaZona({
+      nombre: zona.nombre,
+      descripcion: zona.descripcion || "",
+      latitud: zona.latitud ?? "",
+      longitud: zona.longitud ?? "",
+    });
+    setMostrarFormulario(true);
+  };
+
+  const cerrarFormularioZona = () => {
+    setMostrarFormulario(false);
+    setZonaEditando(null);
+    setNuevaZona({ nombre: "", descripcion: "", latitud: "", longitud: "" });
+  };
+
+  const guardarZona = async () => {
     try {
-      await clienteHttp.post(`/sitios/${idSitio}/zonas`, {
+      const payload = {
         ...nuevaZona,
-        latitud: parseFloat(nuevaZona.latitud),
-        longitud: parseFloat(nuevaZona.longitud),
-      });
-      setMostrarFormulario(false);
-      setNuevaZona({ nombre: "", descripcion: "", latitud: "", longitud: "" });
+        latitud: nuevaZona.latitud === "" ? null : parseFloat(nuevaZona.latitud),
+        longitud: nuevaZona.longitud === "" ? null : parseFloat(nuevaZona.longitud),
+      };
+      if (zonaEditando) {
+        await clienteHttp.put(`/zonas/${zonaEditando}`, payload);
+      } else {
+        await clienteHttp.post(`/sitios/${idSitio}/zonas`, payload);
+      }
+      cerrarFormularioZona();
       window.location.reload();
     } catch {
-      setError("No se pudo crear la zona.");
+      setError(zonaEditando ? "No se pudo actualizar la zona." : "No se pudo crear la zona.");
+    }
+  };
+
+  const eliminarZona = async (id) => {
+    if (!window.confirm("¿Eliminar esta zona? Esta acción no se puede deshacer.")) return;
+    try {
+      await clienteHttp.delete(`/zonas/${id}`);
+      window.location.reload();
+    } catch {
+      setError("No se pudo eliminar la zona.");
     }
   };
 
@@ -167,7 +205,7 @@ function ZonasPage() {
           <div style={estilos.headerDerecha}>
             <button
               style={estilos.botonNuevo}
-              onClick={() => setMostrarFormulario(true)}
+              onClick={abrirNuevaZona}
             >
               + Nueva Zona
             </button>
@@ -181,7 +219,9 @@ function ZonasPage() {
         {mostrarFormulario && (
           <div style={estilos.modalOverlay}>
             <div style={estilos.modal}>
-              <h3 style={{ marginTop: 0, color: "#1a6645" }}>Nueva Zona</h3>
+              <h3 style={{ marginTop: 0, color: "#1a6645" }}>
+                {zonaEditando ? "Editar Zona" : "Nueva Zona"}
+              </h3>
               <label style={estilos.label}>Nombre</label>
               <input
                 style={estilos.input}
@@ -219,12 +259,12 @@ function ZonasPage() {
                 }
               />
               <div style={{ display: "flex", gap: "10px", marginTop: "8px" }}>
-                <button style={estilos.botonNuevo} onClick={crearZona}>
+                <button style={estilos.botonNuevo} onClick={guardarZona}>
                   Guardar
                 </button>
                 <button
                   style={estilos.botonCancelar}
-                  onClick={() => setMostrarFormulario(false)}
+                  onClick={cerrarFormularioZona}
                 >
                   Cancelar
                 </button>
@@ -247,13 +287,14 @@ function ZonasPage() {
                   <th style={estilos.th}>LONGITUD</th>
                   <th style={estilos.th}>CÓDIGO QR</th>
                   <th style={estilos.th}>CONTENIDO</th>
+                  <th style={estilos.th}>ACCIONES</th>
                 </tr>
               </thead>
               <tbody>
                 {zonas.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={6}
+                      colSpan={7}
                       style={{ ...estilos.td, color: "#aaa", textAlign: "center" }}
                     >
                       Sin zonas registradas
@@ -301,6 +342,20 @@ function ZonasPage() {
                           }
                         >
                           🎧 Contenido
+                        </button>
+                      </td>
+                      <td style={estilos.td}>
+                        <button
+                          style={estilos.botonIcono}
+                          onClick={() => abrirEdicionZona(zona)}
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          style={{ ...estilos.botonIcono, color: "#e74c3c" }}
+                          onClick={() => eliminarZona(zona.id)}
+                        >
+                          🗑
                         </button>
                       </td>
                     </tr>
@@ -436,6 +491,13 @@ const estilos = {
     borderRadius: "6px",
     cursor: "pointer",
     fontSize: "12px",
+  },
+  botonIcono: {
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    fontSize: "14px",
+    marginRight: "4px",
   },
   linkDescarga: {
     display: "block",
