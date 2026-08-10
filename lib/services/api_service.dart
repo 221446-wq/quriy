@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../core/config/app_config.dart';
 
 // ── Excepciones tipadas por dominio ───────────────────────────────────────────
 
@@ -40,7 +41,8 @@ class ApiService {
   static final ApiService _instanciaProduccion = ApiService();
 
   // ── Configuración ──────────────────────────────────────────────
-  static const String baseUrl = 'http://10.0.2.2:8000';
+  // URL base inyectada en tiempo de compilación (ver AppConfig).
+  static const String baseUrl = AppConfig.apiBaseUrl;
 
   static const String _emailPrueba    = 'axel@quiry';
   static const String _passwordPrueba = 'axel1';

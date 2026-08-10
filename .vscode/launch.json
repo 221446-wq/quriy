@@ -1,0 +1,26 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Quriy (emulador)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "args": [
+        "--dart-define=API_BASE_URL=http://10.0.2.2:8000"
+      ]
+    },
+    {
+      "name": "Quriy (dispositivo físico)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "args": [
+        // Reemplaza <IP_LAN> por la IP local de tu PC en la red Wi-Fi
+        // (Windows: ipconfig → "Dirección IPv4"). El celular debe estar
+        // conectado a la misma red Wi-Fi que el PC.
+        "--dart-define=API_BASE_URL=http://192.168.1.35:8000"
+      ]
+    }
+  ]
+}

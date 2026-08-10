@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'core/config/app_config.dart';
 import 'core/tema_quriy.dart';
 import 'core/proveedor_idioma.dart';
 import 'screens/login_screen.dart';
 
 void main() {
+  AppConfig.validar();
   runApp(
     ChangeNotifierProvider(
       create: (_) => ProveedorDeIdioma(),
