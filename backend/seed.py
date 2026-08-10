@@ -20,7 +20,7 @@ Base.metadata.create_all(bind=engine)
 # tendra imagen hasta que la agregues.
 # ============================================================
 IMAGENES_SITIOS = {
-    "Qorikancha - Templo del Sol": "",
+    "Qorikancha - Templo del Sol": "https://res.cloudinary.com/m3uozpsd/image/upload/v1786349433/quriy/dhcz2mlakxe1qqcek4s7.jpg",
     "Plaza de Armas del Cusco": "",
     "Piedra de los 12 Angulos": "",
     "Qenqo": "",
