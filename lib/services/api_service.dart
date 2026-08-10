@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/config/app_config.dart';
@@ -242,6 +243,15 @@ class ApiService {
     return _instanciaProduccion.iniciarSesionInterno(email, password);
   }
 
+  /// Las pantallas llaman esto: ApiService.iniciarSesionConGoogle()
+  ///
+  /// Sirve tanto para registrar (primer ingreso con esa cuenta) como para
+  /// iniciar sesión (cuenta ya vinculada) — el backend decide cuál de los
+  /// dos casos aplica en `POST /auth/google` según si el email ya existe.
+  static Future<Map<String, dynamic>> iniciarSesionConGoogle() {
+    return _instanciaProduccion.iniciarSesionConGoogleInterno();
+  }
+
   /// Las pantallas llaman esto: ApiService.obtenerSitios()
   ///
   /// Puede lanzar [ExcepcionSesionExpirada] (no aplica en este endpoint
@@ -326,6 +336,83 @@ class ApiService {
       };
     }
     return {'exito': false, 'mensaje': 'Credenciales incorrectas'};
+  }
+
+  /// Se asegura de llamar `GoogleSignIn.instance.initialize(...)` una sola
+  /// vez: el paquete advierte "undefined behavior" si se llama más de una
+  /// vez o si se usan otros métodos antes de que su future termine.
+  bool _googleSignInInicializado = false;
+
+  Future<void> _asegurarGoogleSignInInicializado() async {
+    if (_googleSignInInicializado) return;
+    await GoogleSignIn.instance.initialize(
+      serverClientId: AppConfig.googleServerClientId,
+    );
+    _googleSignInInicializado = true;
+  }
+
+  /// Inicia sesión (o registra, si es la primera vez) con Google.
+  ///
+  /// A diferencia de [iniciarSesionInterno], acá no hay fallback a modo
+  /// local sin backend: la identidad viene de Google, no hay credencial
+  /// local equivalente que probar. Retorna el mismo contrato que
+  /// [iniciarSesionInterno] ({'exito': ..., 'datos'|'mensaje': ...}), más
+  /// una clave `'cancelado': true` cuando el usuario cierra el selector de
+  /// cuentas sin elegir ninguna — la UI no debe tratar eso como error.
+  Future<Map<String, dynamic>> iniciarSesionConGoogleInterno() async {
+    if (AppConfig.googleServerClientId.isEmpty) {
+      return {
+        'exito': false,
+        'mensaje':
+            'Google Sign-In no está configurado en esta build '
+            '(falta --dart-define=GOOGLE_SERVER_CLIENT_ID=...).',
+      };
+    }
+
+    final String? idToken;
+    try {
+      await _asegurarGoogleSignInInicializado();
+      final cuenta = await GoogleSignIn.instance.authenticate();
+      idToken = cuenta.authentication.idToken;
+    } on GoogleSignInException catch (excepcion) {
+      if (excepcion.code == GoogleSignInExceptionCode.canceled) {
+        return {'exito': false, 'cancelado': true};
+      }
+      return {
+        'exito': false,
+        'mensaje': 'No se pudo iniciar sesión con Google',
+      };
+    }
+
+    if (idToken == null) {
+      return {
+        'exito': false,
+        'mensaje': 'No se pudo iniciar sesión con Google',
+      };
+    }
+
+    try {
+      final respuesta = await clienteHttp
+          .post(
+            Uri.parse('$baseUrl/auth/google'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'id_token': idToken}),
+          )
+          .timeout(const Duration(seconds: 6));
+
+      if (respuesta.statusCode == 200) {
+        return {'exito': true, 'datos': jsonDecode(respuesta.body)};
+      }
+      if (respuesta.statusCode == 401) {
+        return {
+          'exito': false,
+          'mensaje': 'El servidor no aceptó la cuenta de Google',
+        };
+      }
+    } catch (_) {
+      // Backend no disponible — sin fallback local posible acá.
+    }
+    return {'exito': false, 'mensaje': 'No se pudo conectar con el servidor'};
   }
 
   /// Obtiene los sitios arqueológicos disponibles (GET /sitios, público).

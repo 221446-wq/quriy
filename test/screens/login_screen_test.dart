@@ -23,12 +23,12 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  testWidgets('muestra el título Quriy y los campos de email/contraseña', (
+  testWidgets('muestra el título QURIY y los campos de email/contraseña', (
     tester,
   ) async {
     await tester.pumpWidget(envolverLoginScreen());
 
-    expect(find.text('Quriy'), findsOneWidget);
+    expect(find.text('QURIY'), findsOneWidget);
     expect(find.byType(TextField), findsNWidgets(2));
   });
 
@@ -84,5 +84,17 @@ void main() {
 
     expect(find.text('Archaeological Sites of Cusco'), findsOneWidget);
     expect(find.text('Sitios Arqueológicos del Cusco'), findsNothing);
+  });
+
+  testWidgets('muestra el botón "Continuar con Google" junto al de login', (
+    tester,
+  ) async {
+    await tester.pumpWidget(envolverLoginScreen());
+
+    // No se toca (dispararía el plugin nativo de Google Sign-In, que no
+    // está disponible en el entorno de tests): solo se verifica que esté.
+    expect(find.text('Continuar con Google'), findsOneWidget);
+    expect(find.byType(OutlinedButton), findsOneWidget);
+    expect(find.byType(ElevatedButton), findsOneWidget);
   });
 }

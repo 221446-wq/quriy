@@ -20,6 +20,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _controladorEmail = TextEditingController();
   final _controladorPassword = TextEditingController();
   bool _cargando = false;
+  bool _cargandoGoogle = false;
   late String? _mensajeError = widget.mensajeInicial;
 
   Future<void> _iniciarSesion() async {
@@ -48,6 +49,35 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  /// Botón único para registro e inicio de sesión con Google: el backend
+  /// crea la cuenta automáticamente en el primer ingreso con una cuenta de
+  /// Google dada, y en los siguientes solo autentica — no hace falta una
+  /// pantalla de registro separada.
+  Future<void> _continuarConGoogle() async {
+    setState(() {
+      _cargandoGoogle = true;
+      _mensajeError = null;
+    });
+
+    final resultado = await ApiService.iniciarSesionConGoogle();
+
+    if (!mounted) return;
+    setState(() => _cargandoGoogle = false);
+
+    if (resultado['exito'] == true) {
+      await ApiService.guardarToken(resultado['datos']['access_token']);
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const SeleccionSitioScreen()),
+      );
+    } else if (resultado['cancelado'] != true) {
+      // Si el usuario cerró el selector de cuentas sin elegir ninguna, no
+      // es un error real — no mostramos nada y listo.
+      setState(() => _mensajeError = resultado['mensaje']);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final traducciones = context.watch<ProveedorDeIdioma>().traducciones;
@@ -70,19 +100,30 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   // ── Logo splash ────────────────────────────
                   Container(
-                    width: 72,
-                    height: 72,
+                    width: 88,
+                    height: 88,
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(20),
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                    child: const Center(
-                      child: Text('🏛️', style: TextStyle(fontSize: 32)),
+                    child: ClipOval(
+                      child: Image.asset(
+                        'assets/images/logoquriy.png',
+                        fit: BoxFit.cover,
+                        cacheWidth: 176,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 14),
                   const Text(
-                    'Quriy',
+                    'QURIY',
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.w600,
@@ -226,7 +267,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           width: double.infinity,
                           height: 44,
                           child: ElevatedButton(
-                            onPressed: _cargando ? null : _iniciarSesion,
+                            onPressed: (_cargando || _cargandoGoogle)
+                                ? null
+                                : _iniciarSesion,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: PaletaQuriy.esmeraldaPrincipal,
                               shape: RoundedRectangleBorder(
@@ -248,6 +291,72 @@ class _LoginScreenState extends State<LoginScreen> {
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
                                     ),
+                                  ),
+                          ),
+                        ),
+
+                        // Separador "o"
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            const Expanded(child: Divider()),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                              ),
+                              child: Text(
+                                traducciones.separadorO,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey[500],
+                                ),
+                              ),
+                            ),
+                            const Expanded(child: Divider()),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Botón continuar con Google
+                        SizedBox(
+                          width: double.infinity,
+                          height: 44,
+                          child: OutlinedButton(
+                            onPressed: (_cargando || _cargandoGoogle)
+                                ? null
+                                : _continuarConGoogle,
+                            style: OutlinedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              side: const BorderSide(
+                                color: Color(0xFFD1D5DB),
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            child: _cargandoGoogle
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      color: PaletaQuriy.esmeraldaPrincipal,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const _LogoGoogle(),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        traducciones.botonContinuarConGoogle,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF374151),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                           ),
                         ),
@@ -280,6 +389,37 @@ class _LoginScreenState extends State<LoginScreen> {
     _controladorEmail.dispose();
     _controladorPassword.dispose();
     super.dispose();
+  }
+}
+
+/// "G" de Google en un círculo blanco, sin depender de un asset ni de red
+/// (el logo multicolor oficial requeriría un asset SVG que este proyecto
+/// no tiene). Suficiente para que el botón se identifique junto al texto
+/// "Continuar con Google" / "Continue with Google".
+class _LogoGoogle extends StatelessWidget {
+  const _LogoGoogle();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 18,
+      height: 18,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: const Text(
+        'G',
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFF4285F4),
+          height: 1,
+        ),
+      ),
+    );
   }
 }
 

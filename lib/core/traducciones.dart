@@ -14,6 +14,8 @@ abstract class Traducciones {
   String get mensajeCargando;
   String get errorCredenciales;
   String get errorConexion;
+  String get separadorO;
+  String get botonContinuarConGoogle;
 
   // ── Mapa ──────────────────────────────────────────────────────
   String get botonEscanearQR;
@@ -75,6 +77,10 @@ class TraduccionesEspanol implements Traducciones {
   String get errorCredenciales => 'Credenciales incorrectas';
   @override
   String get errorConexion => 'No se pudo conectar al servidor';
+  @override
+  String get separadorO => 'o';
+  @override
+  String get botonContinuarConGoogle => 'Continuar con Google';
 
   @override
   String get botonEscanearQR => 'Escanear QR';
@@ -146,6 +152,10 @@ class TraduccionesIngles implements Traducciones {
   String get errorCredenciales => 'Incorrect credentials';
   @override
   String get errorConexion => 'Could not connect to server';
+  @override
+  String get separadorO => 'or';
+  @override
+  String get botonContinuarConGoogle => 'Continue with Google';
 
   @override
   String get botonEscanearQR => 'Scan QR';

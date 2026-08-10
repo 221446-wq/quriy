@@ -21,7 +21,7 @@ class AplicacionQuriy extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Quriy',
+      title: 'QURIY',
       debugShowCheckedModeBanner: false,
       theme: TemaQuriy.construir(),
       home: const LoginScreen(),

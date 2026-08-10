@@ -12,6 +12,16 @@ class AppConfig {
     defaultValue: 'https://quriy.onrender.com',
   );
 
+  /// Client ID *web* de OAuth de Google Cloud, usado como `serverClientId`
+  /// al iniciar Google Sign-In. Debe ser el mismo client ID que el backend
+  /// tiene configurado en `GOOGLE_CLIENT_ID` (ver `backend/app/auth.py`),
+  /// ya que el backend valida el `audience` del id_token contra ese valor.
+  /// Se inyecta con `--dart-define=GOOGLE_SERVER_CLIENT_ID=...`.
+  static const String googleServerClientId = String.fromEnvironment(
+    'GOOGLE_SERVER_CLIENT_ID',
+    defaultValue: '',
+  );
+
   /// Falla rápido y con un mensaje claro si alguien define
   /// `API_BASE_URL` vacío por error. Solo corre en debug.
   static void validar() {

@@ -1,4 +1,4 @@
-name: QURIY
+name: mobile
 description: "APP turistica Quriy  de Sitios Arqueologuicos del Cusco"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -22,6 +22,7 @@ dependencies:
   just_audio: ^0.9.38
   cached_network_image: ^3.3.1
   cupertino_icons: ^1.0.8
+  google_sign_in: ^7.2.0
 
 dev_dependencies:
   flutter_test:
@@ -30,6 +31,15 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   mockito: ^5.4.4
   build_runner: ^2.4.9
+  flutter_launcher_icons: ^0.14.4
+
+# Ícono de lanzador de Android generado a partir de assets/images/logoquriy.png
+# con `dart run flutter_launcher_icons` (ver README.md → "Branding").
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: false
+  image_path: "assets/images/logoquriy.png"
+  min_sdk_android: 21
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -41,6 +51,9 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  assets:
+    - assets/images/logoquriy.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:
