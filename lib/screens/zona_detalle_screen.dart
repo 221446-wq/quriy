@@ -5,6 +5,9 @@ import '../models/zona.dart';
 import '../models/contenido.dart';
 import '../services/api_service.dart';
 
+/// Estados visuales del botón "Marcar como visitada".
+enum EstadoVisita { noVisitada, enviando, visitada }
+
 class ZonaDetalleScreen extends StatefulWidget {
   final Zona zona;
   final List<Contenido>? contenidoInicial;
@@ -31,6 +34,9 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
 
   // Calificación de la visita (1-5, 0 = sin seleccionar aún)
   int _calificacionSeleccionada = 0;
+
+  // Estado del botón "Marcar como visitada"
+  EstadoVisita _estadoVisita = EstadoVisita.noVisitada;
 
   @override
   void initState() {
@@ -196,6 +202,8 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
                 ),
                 const SizedBox(height: 8),
                 _construirSelectorEstrellas(),
+                const SizedBox(height: 16),
+                _construirBotonVisitada(),
               ],
             ),
           ),
@@ -499,6 +507,66 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
         );
       }),
     );
+  }
+
+  // ── Botón "Marcar como visitada" ──────────────────────────────
+  Widget _construirBotonVisitada() {
+    final esEs = _idiomaSeleccionado == 'es';
+
+    switch (_estadoVisita) {
+      case EstadoVisita.visitada:
+        return Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.green, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              esEs ? 'Visitada' : 'Visited',
+              style: const TextStyle(
+                  color: Colors.green, fontWeight: FontWeight.bold),
+            ),
+          ],
+        );
+      case EstadoVisita.enviando:
+        return SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: null,
+            child: SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: Colors.grey[400]),
+            ),
+          ),
+        );
+      case EstadoVisita.noVisitada:
+        return SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            // TODO(Tarea 3): reemplazar por la llamada real a
+            // ApiService.registrarVisitaZona con estrellas + zona actual.
+            onPressed: _marcarComoVisitadaStub,
+            icon: const Icon(Icons.check),
+            label: Text(esEs ? 'Marcar como visitada' : 'Mark as visited'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF8B4513),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+          ),
+        );
+    }
+  }
+
+  /// Placeholder temporal de la Tarea 2: solo demuestra los 3 estados
+  /// visuales. La Tarea 3 lo reemplaza por la llamada real al backend.
+  Future<void> _marcarComoVisitadaStub() async {
+    setState(() => _estadoVisita = EstadoVisita.enviando);
+    await Future.delayed(const Duration(seconds: 1));
+    if (!mounted) return;
+    setState(() => _estadoVisita = EstadoVisita.visitada);
   }
 
   String _formatearDuracion(Duration d) {
