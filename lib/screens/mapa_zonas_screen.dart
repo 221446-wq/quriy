@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import '../core/estado_visitas_sesion.dart';
 import '../models/zona.dart';
 import '../services/api_service.dart';
 import 'zona_detalle_screen.dart';
@@ -48,9 +49,12 @@ class _MapaZonasScreenState extends State<MapaZonasScreen> {
     });
   }
 
-  void _navegarADetalle(Zona zona) {
-    Navigator.push(context,
+  Future<void> _navegarADetalle(Zona zona) async {
+    await Navigator.push(context,
         MaterialPageRoute(builder: (_) => ZonaDetalleScreen(zona: zona)));
+    // Al volver, refresca por si se marcó la zona como visitada allá.
+    if (!mounted) return;
+    setState(() {});
   }
 
   void _abrirEscanerQR() {
@@ -100,6 +104,7 @@ class _MapaZonasScreenState extends State<MapaZonasScreen> {
         ),
         MarkerLayer(
           markers: zonasConCoordenadas.map((zona) {
+            final visitada = EstadoVisitasSesion.estaVisitada(zona.id);
             return Marker(
               point: LatLng(zona.latitud!, zona.longitud!),
               width: 80,
@@ -108,8 +113,11 @@ class _MapaZonasScreenState extends State<MapaZonasScreen> {
                 onTap: () => _navegarADetalle(zona),
                 child: Column(
                   children: [
-                    const Icon(Icons.location_pin,
-                        color: Color(0xFF8B4513), size: 40),
+                    Icon(
+                      visitada ? Icons.check_circle : Icons.location_pin,
+                      color: visitada ? Colors.green : const Color(0xFF8B4513),
+                      size: 40,
+                    ),
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 4, vertical: 2),
@@ -202,8 +210,12 @@ class _MapaZonasScreenState extends State<MapaZonasScreen> {
   }
 
   Widget _construirItemZonaLista(Zona zona) {
+    final visitada = EstadoVisitasSesion.estaVisitada(zona.id);
     return ListTile(
-      leading: const Icon(Icons.location_pin, color: Color(0xFF8B4513)),
+      leading: Icon(
+        visitada ? Icons.check_circle : Icons.location_pin,
+        color: visitada ? Colors.green : const Color(0xFF8B4513),
+      ),
       title: Text(zona.nombre),
       subtitle: zona.descripcion.isNotEmpty
           ? Text(zona.descripcion,

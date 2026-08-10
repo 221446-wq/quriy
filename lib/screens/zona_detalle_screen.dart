@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:just_audio/just_audio.dart';
+import '../core/estado_visitas_sesion.dart';
 import '../models/zona.dart';
 import '../models/contenido.dart';
 import '../services/api_service.dart';
@@ -36,11 +37,14 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
   int _calificacionSeleccionada = 0;
 
   // Estado del botón "Marcar como visitada"
-  EstadoVisita _estadoVisita = EstadoVisita.noVisitada;
+  late EstadoVisita _estadoVisita;
 
   @override
   void initState() {
     super.initState();
+    _estadoVisita = EstadoVisitasSesion.estaVisitada(widget.zona.id)
+        ? EstadoVisita.visitada
+        : EstadoVisita.noVisitada;
     if (widget.contenidoInicial != null) {
       _contenido = widget.contenidoInicial!;
       _cargando = false;
@@ -576,6 +580,7 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
             ? _calificacionSeleccionada.toDouble()
             : null,
       );
+      EstadoVisitasSesion.marcarVisitada(widget.zona.id);
       if (!mounted) return;
       setState(() => _estadoVisita = EstadoVisita.visitada);
     } catch (_) {
