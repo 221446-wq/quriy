@@ -276,3 +276,124 @@ def traducir_texto_con_ia(
         )
 
     return {"texto_traducido": texto_traducido}
+
+# ============================================================
+# GENERAR AUDIOGUIA COMPLETA (ES audio + EN texto + EN audio)
+# a partir del guion en espanol ya existente en la zona.
+# Es idempotente: si algo ya existe, no lo duplica.
+# ============================================================
+@router.post("/zonas/{id}/generar-audioguia-completa")
+def generar_audioguia_completa(
+    id: int,
+    db: Session = Depends(get_db),
+    admin: Usuario = Depends(verificar_admin)
+):
+    zona = db.query(Zona).filter(Zona.id == id).first()
+    if not zona:
+        raise HTTPException(status_code=404, detail="Zona no encontrada")
+
+    resultado = {
+        "audio_es": "ya existia",
+        "texto_en": "ya existia",
+        "audio_en": "ya existia",
+    }
+
+    # 1) Buscar el guion base en espanol (creado por seed.py)
+    texto_es = db.query(Contenido).filter(
+        Contenido.zona_id == id,
+        Contenido.tipo == "texto",
+        Contenido.idioma == "es",
+    ).first()
+
+    if not texto_es or not texto_es.texto:
+        raise HTTPException(
+            status_code=404,
+            detail="Esta zona no tiene un guion en espanol todavia. "
+                   "Crea primero un contenido de tipo texto en espanol."
+        )
+
+    subcarpeta = "audio"
+    carpeta_destino = os.path.join(DIRECTORIO_STATIC, subcarpeta)
+    os.makedirs(carpeta_destino, exist_ok=True)
+
+    # 2) Generar audio en espanol si no existe
+    audio_es = db.query(Contenido).filter(
+        Contenido.zona_id == id,
+        Contenido.tipo == "audio",
+        Contenido.idioma == "es",
+    ).first()
+
+    if not audio_es:
+        try:
+            nombre_archivo = f"ia_{uuid.uuid4().hex}.mp3"
+            ruta = os.path.join(carpeta_destino, nombre_archivo)
+            gTTS(text=texto_es.texto, lang="es", slow=False).save(ruta)
+            nuevo_audio_es = Contenido(
+                zona_id=id,
+                tipo="audio",
+                idioma="es",
+                titulo=texto_es.titulo or f"Audioguía: {zona.nombre}",
+                texto=texto_es.texto,
+                url_recurso=f"/static/{subcarpeta}/{nombre_archivo}",
+            )
+            db.add(nuevo_audio_es)
+            db.commit()
+            resultado["audio_es"] = "generado"
+        except Exception as error:
+            resultado["audio_es"] = f"error: {error}"
+
+    # 3) Traducir el texto al ingles si no existe
+    texto_en = db.query(Contenido).filter(
+        Contenido.zona_id == id,
+        Contenido.tipo == "texto",
+        Contenido.idioma == "en",
+    ).first()
+
+    texto_en_valor = texto_en.texto if texto_en else None
+
+    if not texto_en:
+        try:
+            texto_en_valor = GoogleTranslator(
+                source="es", target="en"
+            ).translate(texto_es.texto)
+            nuevo_texto_en = Contenido(
+                zona_id=id,
+                tipo="texto",
+                idioma="en",
+                titulo=f"Audio guide: {zona.nombre}",
+                texto=texto_en_valor,
+            )
+            db.add(nuevo_texto_en)
+            db.commit()
+            resultado["texto_en"] = "generado"
+        except Exception as error:
+            resultado["texto_en"] = f"error: {error}"
+            texto_en_valor = None
+
+    # 4) Generar audio en ingles si no existe y ya tenemos el texto traducido
+    audio_en = db.query(Contenido).filter(
+        Contenido.zona_id == id,
+        Contenido.tipo == "audio",
+        Contenido.idioma == "en",
+    ).first()
+
+    if not audio_en and texto_en_valor:
+        try:
+            nombre_archivo = f"ia_{uuid.uuid4().hex}.mp3"
+            ruta = os.path.join(carpeta_destino, nombre_archivo)
+            gTTS(text=texto_en_valor, lang="en", slow=False).save(ruta)
+            nuevo_audio_en = Contenido(
+                zona_id=id,
+                tipo="audio",
+                idioma="en",
+                titulo=f"Audio guide: {zona.nombre}",
+                texto=texto_en_valor,
+                url_recurso=f"/static/{subcarpeta}/{nombre_archivo}",
+            )
+            db.add(nuevo_audio_en)
+            db.commit()
+            resultado["audio_en"] = "generado"
+        except Exception as error:
+            resultado["audio_en"] = f"error: {error}"
+
+    return resultado
