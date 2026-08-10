@@ -106,8 +106,8 @@ def poblar_base_de_datos():
                 ),
                 "ubicacion": "Av. El Sol, Centro Historico, Cusco",
                 "horario": "Lunes a sabado 8:30 - 17:30 / Domingo 14:00 - 17:00",
-                "latitud": -13.5204,
-                "longitud": -71.9757,
+                "latitud": -13.5202365,
+                "longitud": -71.9752339,
                 "zonas": [
                     {
                         "nombre": "Recinto del Sol (Inti)",
@@ -274,8 +274,8 @@ def poblar_base_de_datos():
                 ),
                 "ubicacion": "Centro Historico, Cusco",
                 "horario": "Acceso libre las 24 horas",
-                "latitud": -13.5168,
-                "longitud": -71.9788,
+                "latitud": -13.5167567,
+                "longitud": -71.9788134,
                 "zonas": [
                     {
                         "nombre": "Catedral del Cusco",
@@ -402,8 +402,8 @@ def poblar_base_de_datos():
                 ),
                 "ubicacion": "Calle Hatun Rumiyoc, Barrio de San Blas, Cusco",
                 "horario": "Acceso libre las 24 horas (guardias de 7am a 7pm)",
-                "latitud": -13.5160,
-                "longitud": -71.9763,
+                "latitud": -13.5160115,
+                "longitud": -71.9762743,
                 "zonas": [
                     {
                         "nombre": "La Piedra Principal",
@@ -511,8 +511,8 @@ def poblar_base_de_datos():
                 ),
                 "ubicacion": "Cerro Socorro, a 4 km del Centro Historico, Cusco",
                 "horario": "7:00 AM - 6:00 PM",
-                "latitud": -13.5053,
-                "longitud": -71.9711,
+                "latitud": -13.5088984,
+                "longitud": -71.9706558,
                 "zonas": [
                     {
                         "nombre": "Anfiteatro Semicircular",
@@ -637,8 +637,8 @@ def poblar_base_de_datos():
                 ),
                 "ubicacion": "Cerro Pukamoqo, cerca de Sacsayhuaman, Cusco",
                 "horario": "Acceso libre (mejor visita al amanecer o atardecer)",
-                "latitud": -13.5097,
-                "longitud": -71.9781,
+                "latitud": -13.5096406,
+                "longitud": -71.9781159,
                 "zonas": [
                     {
                         "nombre": "Estatua del Cristo Blanco",
