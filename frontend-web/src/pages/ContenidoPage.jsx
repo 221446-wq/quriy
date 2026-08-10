@@ -36,6 +36,7 @@ function ContenidoPage() {
   const [guardando, setGuardando] = useState(false);
   const [generandoAudio, setGenerandoAudio] = useState(false);
   const [traduciendo, setTraduciendo] = useState(false);
+  const [generandoTodo, setGenerandoTodo] = useState(false);
   const [idiomaActivo, setIdiomaActivo] = useState("es");
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [formulario, setFormulario] = useState(FORMULARIO_VACIO);
@@ -182,6 +183,23 @@ function ContenidoPage() {
     }
   };
 
+  const generarTodoAutomatico = async () => {
+    setGenerandoTodo(true);
+    setError("");
+    try {
+      await clienteHttp.post(`/zonas/${idZona}/generar-audioguia-completa`);
+      await cargarContenidos();
+    } catch (err) {
+      const detalle = err?.response?.data?.detail;
+      setError(
+        detalle ||
+          "No se pudo generar la audioguía automática. Verifica que exista un texto en español para esta zona."
+      );
+    } finally {
+      setGenerandoTodo(false);
+    }
+  };
+
   const eliminarContenido = async (id) => {
     try {
       await clienteHttp.delete(`/contenido/${id}`);
@@ -275,9 +293,22 @@ function ContenidoPage() {
               Contenido {nombreZona ? `— ${nombreZona}` : `— Zona #${idZona}`}
             </h1>
           </div>
-          <button style={estilos.botonNuevo} onClick={abrirNuevo}>
-            + Agregar contenido
-          </button>
+          <div style={{ display: "flex", gap: "10px" }}>
+            <button
+              style={{
+                ...estilos.botonCancelar,
+                opacity: generandoTodo ? 0.7 : 1,
+              }}
+              onClick={generarTodoAutomatico}
+              disabled={generandoTodo}
+              title="Toma el texto en español de esta zona, genera su audio, lo traduce a inglés y genera también su audio en inglés"
+            >
+              {generandoTodo ? "Generando..." : "🪄 Generar audioguía completa"}
+            </button>
+            <button style={estilos.botonNuevo} onClick={abrirNuevo}>
+              + Agregar contenido
+            </button>
+          </div>
         </div>
 
         {error && <p style={estilos.error}>{error}</p>}

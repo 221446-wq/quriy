@@ -15,6 +15,9 @@ function DashboardPage() {
   const [resumen, setResumen] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
+  const [generandoMasivo, setGenerandoMasivo] = useState(false);
+  const [progreso, setProgreso] = useState({ actual: 0, total: 0, zonaActual: "" });
+  const [logResultados, setLogResultados] = useState([]);
 
   useEffect(() => {
     let activo = true;
@@ -36,6 +39,57 @@ function DashboardPage() {
   const cerrarSesion = () => {
     localStorage.removeItem("token");
     navegar("/");
+  };
+
+  const generarTodasLasAudioguias = async () => {
+    setGenerandoMasivo(true);
+    setLogResultados([]);
+    setProgreso({ actual: 0, total: 0, zonaActual: "" });
+
+    try {
+      const respuestaSitios = await clienteHttp.get("/sitios");
+      const sitios = respuestaSitios.data;
+
+      // Reunir todas las zonas de todos los sitios en una sola lista
+      let todasLasZonas = [];
+      for (const sitio of sitios) {
+        const respuestaZonas = await clienteHttp.get(`/sitios/${sitio.id}/zonas`);
+        todasLasZonas = todasLasZonas.concat(
+          respuestaZonas.data.map((z) => ({ ...z, nombreSitio: sitio.nombre }))
+        );
+      }
+
+      setProgreso({ actual: 0, total: todasLasZonas.length, zonaActual: "" });
+
+      for (let i = 0; i < todasLasZonas.length; i++) {
+        const zona = todasLasZonas[i];
+        setProgreso({
+          actual: i + 1,
+          total: todasLasZonas.length,
+          zonaActual: `${zona.nombreSitio} — ${zona.nombre}`,
+        });
+        try {
+          await clienteHttp.post(`/zonas/${zona.id}/generar-audioguia-completa`);
+          setLogResultados((prev) => [
+            ...prev,
+            `✅ ${zona.nombreSitio} — ${zona.nombre}`,
+          ]);
+        } catch (err) {
+          const detalle = err?.response?.data?.detail || "error desconocido";
+          setLogResultados((prev) => [
+            ...prev,
+            `⚠️ ${zona.nombreSitio} — ${zona.nombre}: ${detalle}`,
+          ]);
+        }
+      }
+    } catch {
+      setLogResultados((prev) => [
+        ...prev,
+        "❌ No se pudo obtener la lista de sitios y zonas.",
+      ]);
+    } finally {
+      setGenerandoMasivo(false);
+    }
   };
 
   const menuItems = [
@@ -125,6 +179,92 @@ function DashboardPage() {
             ))}
           </div>
         )}
+
+        {/* Panel de generación masiva de audioguías con IA */}
+        <div
+          style={{
+            marginTop: "28px",
+            padding: "20px",
+            backgroundColor: "#fff",
+            borderRadius: "10px",
+            border: "1px solid #e5e5e5",
+          }}
+        >
+          <h3 style={{ marginTop: 0, color: "#1a6645" }}>
+            🪄 Generar todas las audioguías con IA
+          </h3>
+          <p style={{ color: "#555", fontSize: "14px", marginBottom: "14px" }}>
+            Recorre automáticamente todos los sitios y zonas. Para cada zona
+            que ya tenga un guion en español, genera su audio, lo traduce al
+            inglés y genera también el audio en inglés. No duplica lo que ya
+            exista, así que puedes ejecutarlo varias veces sin problema.
+          </p>
+
+          <button
+            style={{
+              padding: "10px 18px",
+              backgroundColor: "#1a6645",
+              color: "#fff",
+              border: "none",
+              borderRadius: "6px",
+              cursor: generandoMasivo ? "not-allowed" : "pointer",
+              opacity: generandoMasivo ? 0.7 : 1,
+              fontWeight: "bold",
+            }}
+            onClick={generarTodasLasAudioguias}
+            disabled={generandoMasivo}
+          >
+            {generandoMasivo
+              ? `Generando... (${progreso.actual}/${progreso.total})`
+              : "Generar todas las audioguías"}
+          </button>
+
+          {generandoMasivo && progreso.total > 0 && (
+            <div style={{ marginTop: "14px" }}>
+              <div
+                style={{
+                  height: "8px",
+                  backgroundColor: "#eee",
+                  borderRadius: "4px",
+                  overflow: "hidden",
+                }}
+              >
+                <div
+                  style={{
+                    height: "100%",
+                    width: `${(progreso.actual / progreso.total) * 100}%`,
+                    backgroundColor: "#1a6645",
+                    transition: "width 0.3s ease",
+                  }}
+                />
+              </div>
+              <p style={{ fontSize: "13px", color: "#666", marginTop: "6px" }}>
+                Procesando: {progreso.zonaActual}
+              </p>
+            </div>
+          )}
+
+          {logResultados.length > 0 && (
+            <div
+              style={{
+                marginTop: "14px",
+                maxHeight: "220px",
+                overflowY: "auto",
+                fontSize: "13px",
+                backgroundColor: "#fafafa",
+                border: "1px solid #eee",
+                borderRadius: "6px",
+                padding: "10px",
+              }}
+            >
+              {logResultados.map((linea, indice) => (
+                <div key={indice} style={{ padding: "2px 0" }}>
+                  {linea}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </main>
     </div>
   );
