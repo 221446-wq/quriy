@@ -3,26 +3,28 @@ import 'package:provider/provider.dart';
 import '../core/tema_quriy.dart';
 import '../core/proveedor_idioma.dart';
 import '../services/api_service.dart';
-import 'mapa_zonas_screen.dart';
+import 'seleccion_sitio_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  /// Mensaje a mostrar apenas se abre (ej. "tu sesión expiró"). No es un
+  /// error de este login, sino el motivo por el que volviste acá.
+  final String? mensajeInicial;
+
+  const LoginScreen({super.key, this.mensajeInicial});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _controladorEmail    = TextEditingController();
+  final _controladorEmail = TextEditingController();
   final _controladorPassword = TextEditingController();
-  bool _cargando     = false;
-  String? _mensajeError;
+  bool _cargando = false;
+  late String? _mensajeError = widget.mensajeInicial;
 
   Future<void> _iniciarSesion() async {
-    final traducciones = context.read<ProveedorDeIdioma>().traducciones;
-
     setState(() {
-      _cargando     = true;
+      _cargando = true;
       _mensajeError = null;
     });
 
@@ -36,9 +38,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (resultado['exito'] == true) {
       await ApiService.guardarToken(resultado['datos']['access_token']);
+      if (!mounted) return;
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const MapaZonasScreen(sitioId: 1)),
+        MaterialPageRoute(builder: (_) => const SeleccionSitioScreen()),
       );
     } else {
       setState(() => _mensajeError = resultado['mensaje']);
@@ -55,11 +58,7 @@ class _LoginScreenState extends State<LoginScreen> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF064E3B),
-              Color(0xFF059669),
-              Color(0xFF10B981),
-            ],
+            colors: [Color(0xFF064E3B), Color(0xFF059669), Color(0xFF10B981)],
           ),
         ),
         child: SafeArea(
@@ -74,7 +73,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     width: 72,
                     height: 72,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
+                      color: Colors.white.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: const Center(
@@ -96,8 +95,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     traducciones.codigoIdioma == 'es'
                         ? 'Sitios Arqueológicos del Cusco'
                         : 'Archaeological Sites of Cusco',
-                    style: const TextStyle(
-                        color: Colors.white60, fontSize: 12),
+                    style: const TextStyle(color: Colors.white60, fontSize: 12),
                   ),
                   const SizedBox(height: 36),
 
@@ -108,7 +106,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.15),
+                          color: Colors.black.withValues(alpha: 0.15),
                           blurRadius: 24,
                           offset: const Offset(0, 8),
                         ),
@@ -121,18 +119,19 @@ class _LoginScreenState extends State<LoginScreen> {
                         // Selector de idioma
                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            _SelectorIdioma(),
-                          ],
+                          children: [_SelectorIdioma()],
                         ),
                         const SizedBox(height: 8),
 
                         // Campo email
-                        Text(traducciones.etiquetaCorreo,
-                            style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color: Color(0xFF374151))),
+                        Text(
+                          traducciones.etiquetaCorreo,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF374151),
+                          ),
+                        ),
                         const SizedBox(height: 4),
                         TextField(
                           controller: _controladorEmail,
@@ -141,22 +140,31 @@ class _LoginScreenState extends State<LoginScreen> {
                           decoration: InputDecoration(
                             hintText: 'marco@quriy.com',
                             hintStyle: const TextStyle(
-                                color: PaletaQuriy.textoSutil, fontSize: 12),
-                            prefixIcon: const Icon(Icons.email_outlined,
-                                size: 18,
-                                color: PaletaQuriy.textoSecundario),
+                              color: PaletaQuriy.textoSutil,
+                              fontSize: 12,
+                            ),
+                            prefixIcon: const Icon(
+                              Icons.email_outlined,
+                              size: 18,
+                              color: PaletaQuriy.textoSecundario,
+                            ),
                             contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 10),
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 14),
 
                         // Campo contraseña
-                        Text(traducciones.etiquetaContrasena,
-                            style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color: Color(0xFF374151))),
+                        Text(
+                          traducciones.etiquetaContrasena,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF374151),
+                          ),
+                        ),
                         const SizedBox(height: 4),
                         TextField(
                           controller: _controladorPassword,
@@ -165,12 +173,18 @@ class _LoginScreenState extends State<LoginScreen> {
                           decoration: InputDecoration(
                             hintText: '••••••••',
                             hintStyle: const TextStyle(
-                                color: PaletaQuriy.textoSutil, fontSize: 12),
-                            prefixIcon: const Icon(Icons.lock_outline,
-                                size: 18,
-                                color: PaletaQuriy.textoSecundario),
+                              color: PaletaQuriy.textoSutil,
+                              fontSize: 12,
+                            ),
+                            prefixIcon: const Icon(
+                              Icons.lock_outline,
+                              size: 18,
+                              color: PaletaQuriy.textoSecundario,
+                            ),
                             contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 10),
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
                           ),
                         ),
 
@@ -179,20 +193,28 @@ class _LoginScreenState extends State<LoginScreen> {
                           const SizedBox(height: 10),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 8),
+                              horizontal: 10,
+                              vertical: 8,
+                            ),
                             decoration: BoxDecoration(
                               color: const Color(0xFFFEE2E2),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.error_outline,
-                                    size: 14, color: Color(0xFFDC2626)),
+                                const Icon(
+                                  Icons.error_outline,
+                                  size: 14,
+                                  color: Color(0xFFDC2626),
+                                ),
                                 const SizedBox(width: 6),
-                                Text(_mensajeError!,
-                                    style: const TextStyle(
-                                        fontSize: 11,
-                                        color: Color(0xFFDC2626))),
+                                Text(
+                                  _mensajeError!,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: Color(0xFFDC2626),
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -208,19 +230,25 @@ class _LoginScreenState extends State<LoginScreen> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: PaletaQuriy.esmeraldaPrincipal,
                               shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10)),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
                             ),
                             child: _cargando
                                 ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 2))
-                                : Text(traducciones.botonIngresar,
-                                style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600)),
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Text(
+                                    traducciones.botonIngresar,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
                           ),
                         ),
 
@@ -228,10 +256,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 12),
                         Center(
                           child: Text(
-                            'Demo: marco@quriy.com / quriy2026',
+                            'Demo (sin backend): axel@quiry / axel1',
                             style: TextStyle(
-                                fontSize: 9,
-                                color: Colors.grey[400]),
+                              fontSize: 9,
+                              color: Colors.grey[400],
+                            ),
                           ),
                         ),
                       ],

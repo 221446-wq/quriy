@@ -3,6 +3,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
 import '../core/tema_quriy.dart';
 import '../core/proveedor_idioma.dart';
+import '../core/manejo_sesion.dart';
 import '../models/zona.dart';
 import '../models/contenido.dart';
 import '../services/api_service.dart';
@@ -26,8 +27,7 @@ class _EscanerQRScreenState extends State<EscanerQRScreen> {
     setState(() => _procesando = true);
 
     final zonaId = _extraerIdDeZona(codigoRaw);
-    final traducciones =
-        context.read<ProveedorDeIdioma>().traducciones;
+    final traducciones = context.read<ProveedorDeIdioma>().traducciones;
 
     if (zonaId == null) {
       if (!mounted) return;
@@ -36,37 +36,44 @@ class _EscanerQRScreenState extends State<EscanerQRScreen> {
       return;
     }
 
-    final contenidoDeZona =
-    await ApiService.obtenerContenidoDeZona(zonaId);
+    try {
+      final respuesta = await ApiService.obtenerContenidoDeZona(zonaId);
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    if (contenidoDeZona.isEmpty) {
-      _mostrarMensajeError(traducciones.errorZonaSinContenido);
-      setState(() => _procesando = false);
-      return;
-    }
+      if (respuesta.datos.isEmpty) {
+        _mostrarMensajeError(traducciones.errorZonaSinContenido);
+        setState(() => _procesando = false);
+        return;
+      }
 
-    final zonaEscaneada = Zona(
-      id: zonaId,
-      nombre: 'Zona $zonaId',
-      descripcion: '',
-      latitud: 0,
-      longitud: 0,
-      activa: true,
-    );
+      final zonaEscaneada = Zona(
+        id: zonaId,
+        nombre: 'Zona $zonaId',
+        descripcion: '',
+        latitud: 0,
+        longitud: 0,
+        activa: true,
+      );
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ZonaDetalleScreen(
-          zona: zonaEscaneada,
-          contenidoInicial: contenidoDeZona
-              .map((json) => Contenido.desdeJson(json as Map<String, dynamic>))
-              .toList(),
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ZonaDetalleScreen(
+            zona: zonaEscaneada,
+            contenidoInicial: respuesta.datos
+                .map(
+                  (json) => Contenido.desdeJson(json as Map<String, dynamic>),
+                )
+                .toList(),
+            contenidoInicialEsDemo: respuesta.esDatosLocales,
+          ),
         ),
-      ),
-    );
+      );
+    } on ExcepcionSesionExpirada {
+      if (!mounted) return;
+      await manejarSesionExpirada(context);
+    }
   }
 
   int? _extraerIdDeZona(String codigoQR) {
@@ -125,8 +132,9 @@ class _EscanerQRScreenState extends State<EscanerQRScreen> {
                         color: PaletaQuriy.esmeraldaPrincipal,
                         boxShadow: [
                           BoxShadow(
-                            color: PaletaQuriy.esmeraldaPrincipal
-                                .withOpacity(0.6),
+                            color: PaletaQuriy.esmeraldaPrincipal.withValues(
+                              alpha: 0.6,
+                            ),
                             blurRadius: 6,
                           ),
                         ],
@@ -146,15 +154,16 @@ class _EscanerQRScreenState extends State<EscanerQRScreen> {
             child: Center(
               child: Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 20, vertical: 10),
+                  horizontal: 20,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.6),
+                  color: Colors.black.withValues(alpha: 0.6),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   traducciones.instruccionEscanear,
-                  style: const TextStyle(
-                      color: Colors.white, fontSize: 13),
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
                 ),
               ),
             ),
@@ -163,10 +172,11 @@ class _EscanerQRScreenState extends State<EscanerQRScreen> {
           // Overlay de carga
           if (_procesando)
             Container(
-              color: Colors.black.withOpacity(0.6),
+              color: Colors.black.withValues(alpha: 0.6),
               child: const Center(
                 child: CircularProgressIndicator(
-                    color: PaletaQuriy.esmeraldaPrincipal),
+                  color: PaletaQuriy.esmeraldaPrincipal,
+                ),
               ),
             ),
         ],
@@ -177,43 +187,55 @@ class _EscanerQRScreenState extends State<EscanerQRScreen> {
   /// Construye las 4 esquinas verdes del visor QR, igual al prototipo.
   List<Widget> _construirEsquinasDelVisor() {
     const tamanioEsquina = 20.0;
-    const grosorBorde    = 3.0;
-    const colorEsquina   = PaletaQuriy.esmeraldaPrincipal;
+    const grosorBorde = 3.0;
+    const colorEsquina = PaletaQuriy.esmeraldaPrincipal;
 
     return [
       // Superior izquierda
       Positioned(
-        top: 0, left: 0,
+        top: 0,
+        left: 0,
         child: _EsquinaVisor(
-          bordeTop: grosorBorde, bordeLeft: grosorBorde,
-          radioTopLeft: 4, tamanio: tamanioEsquina,
+          bordeTop: grosorBorde,
+          bordeLeft: grosorBorde,
+          radioTopLeft: 4,
+          tamanio: tamanioEsquina,
           color: colorEsquina,
         ),
       ),
       // Superior derecha
       Positioned(
-        top: 0, right: 0,
+        top: 0,
+        right: 0,
         child: _EsquinaVisor(
-          bordeTop: grosorBorde, bordeRight: grosorBorde,
-          radioTopRight: 4, tamanio: tamanioEsquina,
+          bordeTop: grosorBorde,
+          bordeRight: grosorBorde,
+          radioTopRight: 4,
+          tamanio: tamanioEsquina,
           color: colorEsquina,
         ),
       ),
       // Inferior izquierda
       Positioned(
-        bottom: 0, left: 0,
+        bottom: 0,
+        left: 0,
         child: _EsquinaVisor(
-          bordeBottom: grosorBorde, bordeLeft: grosorBorde,
-          radioBottomLeft: 4, tamanio: tamanioEsquina,
+          bordeBottom: grosorBorde,
+          bordeLeft: grosorBorde,
+          radioBottomLeft: 4,
+          tamanio: tamanioEsquina,
           color: colorEsquina,
         ),
       ),
       // Inferior derecha
       Positioned(
-        bottom: 0, right: 0,
+        bottom: 0,
+        right: 0,
         child: _EsquinaVisor(
-          bordeBottom: grosorBorde, bordeRight: grosorBorde,
-          radioBottomRight: 4, tamanio: tamanioEsquina,
+          bordeBottom: grosorBorde,
+          bordeRight: grosorBorde,
+          radioBottomRight: 4,
+          tamanio: tamanioEsquina,
           color: colorEsquina,
         ),
       ),
@@ -231,10 +253,14 @@ class _EsquinaVisor extends StatelessWidget {
   const _EsquinaVisor({
     required this.tamanio,
     required this.color,
-    this.bordeTop = 0, this.bordeBottom = 0,
-    this.bordeLeft = 0, this.bordeRight = 0,
-    this.radioTopLeft = 0, this.radioTopRight = 0,
-    this.radioBottomLeft = 0, this.radioBottomRight = 0,
+    this.bordeTop = 0,
+    this.bordeBottom = 0,
+    this.bordeLeft = 0,
+    this.bordeRight = 0,
+    this.radioTopLeft = 0,
+    this.radioTopRight = 0,
+    this.radioBottomLeft = 0,
+    this.radioBottomRight = 0,
   });
 
   @override
@@ -244,15 +270,15 @@ class _EsquinaVisor extends StatelessWidget {
       height: tamanio,
       decoration: BoxDecoration(
         border: Border(
-          top:    BorderSide(color: color, width: bordeTop),
+          top: BorderSide(color: color, width: bordeTop),
           bottom: BorderSide(color: color, width: bordeBottom),
-          left:   BorderSide(color: color, width: bordeLeft),
-          right:  BorderSide(color: color, width: bordeRight),
+          left: BorderSide(color: color, width: bordeLeft),
+          right: BorderSide(color: color, width: bordeRight),
         ),
         borderRadius: BorderRadius.only(
-          topLeft:     Radius.circular(radioTopLeft),
-          topRight:    Radius.circular(radioTopRight),
-          bottomLeft:  Radius.circular(radioBottomLeft),
+          topLeft: Radius.circular(radioTopLeft),
+          topRight: Radius.circular(radioTopRight),
+          bottomLeft: Radius.circular(radioBottomLeft),
           bottomRight: Radius.circular(radioBottomRight),
         ),
       ),

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:just_audio/just_audio.dart';
+import '../core/banner_modo_demo.dart';
 import '../core/estado_visitas_sesion.dart';
+import '../core/manejo_sesion.dart';
 import '../models/zona.dart';
 import '../models/contenido.dart';
 import '../services/api_service.dart';
@@ -13,10 +15,15 @@ class ZonaDetalleScreen extends StatefulWidget {
   final Zona zona;
   final List<Contenido>? contenidoInicial;
 
+  /// Si `contenidoInicial` vino de datos locales de demo (lo decide quien
+  /// ya lo haya cargado, ej. EscanerQRScreen).
+  final bool contenidoInicialEsDemo;
+
   const ZonaDetalleScreen({
     super.key,
     required this.zona,
     this.contenidoInicial,
+    this.contenidoInicialEsDemo = false,
   });
 
   @override
@@ -26,6 +33,7 @@ class ZonaDetalleScreen extends StatefulWidget {
 class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
   List<Contenido> _contenido = [];
   bool _cargando = true;
+  bool _esModoDemo = false;
   String _idiomaSeleccionado = 'es';
 
   // Reproductor de audio
@@ -47,6 +55,7 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
         : EstadoVisita.noVisitada;
     if (widget.contenidoInicial != null) {
       _contenido = widget.contenidoInicial!;
+      _esModoDemo = widget.contenidoInicialEsDemo;
       _cargando = false;
     } else {
       _cargarContenido();
@@ -61,18 +70,32 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
   }
 
   Future<void> _cargarContenido() async {
-    final datos = await ApiService.obtenerContenidoDeZona(widget.zona.id);
-    if (!mounted) return;
-    setState(() {
-      _contenido = datos
-          .map((json) => Contenido.desdeJson(json as Map<String, dynamic>))
-          .toList();
-      _cargando = false;
-    });
+    try {
+      final respuesta = await ApiService.obtenerContenidoDeZona(widget.zona.id);
+      if (!mounted) return;
+      setState(() {
+        _contenido = respuesta.datos
+            .map((json) => Contenido.desdeJson(json as Map<String, dynamic>))
+            .toList();
+        _esModoDemo = respuesta.esDatosLocales;
+        _cargando = false;
+      });
+    } on ExcepcionSesionExpirada {
+      if (!mounted) return;
+      await manejarSesionExpirada(context);
+    }
   }
 
   List<Contenido> get _contenidoFiltrado =>
       _contenido.where((c) => c.idioma == _idiomaSeleccionado).toList();
+
+  /// Idiomas con contenido que el selector ES/EN no puede mostrar (el
+  /// backend no está limitado a esos dos). Sin esto, ese contenido queda
+  /// invisible sin ningún aviso.
+  Set<String> get _idiomasNoSoportados => _contenido
+      .map((c) => c.idioma)
+      .where((idioma) => idioma != 'es' && idioma != 'en')
+      .toSet();
 
   Future<void> _toggleAudio(String url) async {
     if (_urlAudioActual == url && _reproduciendo) {
@@ -128,124 +151,172 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
       ),
       body: _cargando
           ? const Center(child: CircularProgressIndicator())
-          : ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // ── Encabezado de la zona ──────────────────────
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.black.withOpacity(0.07),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2)),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          : Column(
               children: [
-                Row(
-                  children: [
-                    const Icon(Icons.location_on,
-                        color: Color(0xFF8B4513)),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        widget.zona.nombre,
+                if (_esModoDemo) const BannerModoDemo(),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      // ── Encabezado de la zona ──────────────────────
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.07),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.location_on,
+                                  color: Color(0xFF8B4513),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    widget.zona.nombre,
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF3E1A00),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (widget.zona.descripcion.isNotEmpty) ...[
+                              const SizedBox(height: 10),
+                              Text(
+                                widget.zona.descripcion,
+                                style: TextStyle(
+                                  color: Colors.grey[700],
+                                  height: 1.5,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // ── Tarjeta "Tu visita" (calificación) ─────────
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.07),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _idiomaSeleccionado == 'es'
+                                  ? 'Califica tu visita'
+                                  : 'Rate your visit',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF3E1A00),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            _construirSelectorEstrellas(),
+                            const SizedBox(height: 16),
+                            _construirBotonVisitada(),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // ── Título sección contenido ───────────────────
+                      Text(
+                        _idiomaSeleccionado == 'es'
+                            ? 'Contenido multimedia'
+                            : 'Multimedia content',
                         style: const TextStyle(
-                          fontSize: 20,
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF3E1A00),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                if (widget.zona.descripcion.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  Text(
-                    widget.zona.descripcion,
-                    style: TextStyle(
-                        color: Colors.grey[700], height: 1.5),
+                      const SizedBox(height: 10),
+
+                      // ── Lista de contenido ─────────────────────────
+                      if (_contenidoFiltrado.isEmpty)
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(32),
+                            child: Text(
+                              _idiomaSeleccionado == 'es'
+                                  ? 'No hay contenido en español'
+                                  : 'No content available in English',
+                              style: const TextStyle(color: Colors.grey),
+                            ),
+                          ),
+                        )
+                      else
+                        ..._contenidoFiltrado.map((c) => _construirTarjeta(c)),
+
+                      // ── Aviso de contenido en otros idiomas ────────
+                      if (_idiomasNoSoportados.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFF3CD),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.translate,
+                                size: 16,
+                                color: Color(0xFF92600B),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _idiomaSeleccionado == 'es'
+                                      ? 'Esta zona también tiene contenido en otros idiomas '
+                                            '(${_idiomasNoSoportados.join(', ')}) que esta app '
+                                            'todavía no puede mostrar.'
+                                      : 'This zone also has content in other languages '
+                                            '(${_idiomasNoSoportados.join(', ')}) that this app '
+                                            'cannot display yet.',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF92600B),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
-                ],
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // ── Tarjeta "Tu visita" (calificación) ─────────
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.black.withOpacity(0.07),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2)),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _idiomaSeleccionado == 'es'
-                      ? 'Califica tu visita'
-                      : 'Rate your visit',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF3E1A00),
-                  ),
                 ),
-                const SizedBox(height: 8),
-                _construirSelectorEstrellas(),
-                const SizedBox(height: 16),
-                _construirBotonVisitada(),
               ],
             ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // ── Título sección contenido ───────────────────
-          Text(
-            _idiomaSeleccionado == 'es'
-                ? 'Contenido multimedia'
-                : 'Multimedia content',
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF3E1A00),
-            ),
-          ),
-          const SizedBox(height: 10),
-
-          // ── Lista de contenido ─────────────────────────
-          if (_contenidoFiltrado.isEmpty)
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Text(
-                  _idiomaSeleccionado == 'es'
-                      ? 'No hay contenido en español'
-                      : 'No content available in English',
-                  style: const TextStyle(color: Colors.grey),
-                ),
-              ),
-            )
-          else
-            ..._contenidoFiltrado
-                .map((c) => _construirTarjeta(c))
-                .toList(),
-        ],
-      ),
     );
   }
 
@@ -259,9 +330,10 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.07),
-              blurRadius: 8,
-              offset: const Offset(0, 2)),
+            color: Colors.black.withValues(alpha: 0.07),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
         ],
       ),
       child: switch (tipo) {
@@ -284,17 +356,23 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.15),
+                  color: Colors.orange.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.article, color: Colors.orange, size: 20),
+                child: const Icon(
+                  Icons.article,
+                  color: Colors.orange,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   c.titulo.isNotEmpty ? c.titulo : 'Información',
                   style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 15),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
                 ),
               ),
             ],
@@ -322,27 +400,30 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
           borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
           child: url.isNotEmpty
               ? CachedNetworkImage(
-            imageUrl: url,
-            height: 200,
-            width: double.infinity,
-            fit: BoxFit.cover,
-            placeholder: (_, __) => Container(
-              height: 200,
-              color: Colors.grey[200],
-              child: const Center(child: CircularProgressIndicator()),
-            ),
-            errorWidget: (_, __, ___) => Container(
-              height: 200,
-              color: Colors.grey[200],
-              child: const Icon(Icons.broken_image,
-                  size: 48, color: Colors.grey),
-            ),
-          )
+                  imageUrl: url,
+                  height: 200,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  placeholder: (_, _) => Container(
+                    height: 200,
+                    color: Colors.grey[200],
+                    child: const Center(child: CircularProgressIndicator()),
+                  ),
+                  errorWidget: (_, _, _) => Container(
+                    height: 200,
+                    color: Colors.grey[200],
+                    child: const Icon(
+                      Icons.broken_image,
+                      size: 48,
+                      color: Colors.grey,
+                    ),
+                  ),
+                )
               : Container(
-            height: 200,
-            color: Colors.grey[200],
-            child: const Icon(Icons.image, size: 48, color: Colors.grey),
-          ),
+                  height: 200,
+                  color: Colors.grey[200],
+                  child: const Icon(Icons.image, size: 48, color: Colors.grey),
+                ),
         ),
         // Título e info
         Padding(
@@ -355,23 +436,31 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
                   Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.15),
+                      color: Colors.green.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(6),
                     ),
-                    child: const Icon(Icons.image, color: Colors.green, size: 18),
+                    child: const Icon(
+                      Icons.image,
+                      color: Colors.green,
+                      size: 18,
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Text(
                     c.titulo.isNotEmpty ? c.titulo : 'Imagen',
                     style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 15),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
                   ),
                 ],
               ),
               if (c.descripcion.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                Text(c.descripcion,
-                    style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                Text(
+                  c.descripcion,
+                  style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                ),
               ],
             ],
           ),
@@ -396,10 +485,14 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.15),
+                  color: Colors.blue.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.headphones, color: Colors.blue, size: 20),
+                child: const Icon(
+                  Icons.headphones,
+                  color: Colors.blue,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -409,12 +502,15 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
                     Text(
                       c.titulo.isNotEmpty ? c.titulo : 'Audioguía',
                       style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 15),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
                     ),
                     if (c.descripcion.isNotEmpty)
-                      Text(c.descripcion,
-                          style: TextStyle(
-                              color: Colors.grey[600], fontSize: 12)),
+                      Text(
+                        c.descripcion,
+                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                      ),
                   ],
                 ),
               ),
@@ -429,32 +525,37 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
                 return StreamBuilder<Duration>(
                   stream: _audioPlayer.positionStream,
                   builder: (context, snapPos) {
-                    final duracion =
-                        snapDuration.data ?? Duration.zero;
+                    final duracion = snapDuration.data ?? Duration.zero;
                     final posicion = snapPos.data ?? Duration.zero;
                     final progreso = duracion.inMilliseconds > 0
-                        ? posicion.inMilliseconds /
-                        duracion.inMilliseconds
+                        ? posicion.inMilliseconds / duracion.inMilliseconds
                         : 0.0;
 
                     return Column(
                       children: [
                         LinearProgressIndicator(
                           value: progreso.clamp(0.0, 1.0),
-                          backgroundColor: Colors.blue.withOpacity(0.2),
+                          backgroundColor: Colors.blue.withValues(alpha: 0.2),
                           color: Colors.blue,
                         ),
                         const SizedBox(height: 4),
                         Row(
-                          mainAxisAlignment:
-                          MainAxisAlignment.spaceBetween,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(_formatearDuracion(posicion),
-                                style: const TextStyle(
-                                    fontSize: 11, color: Colors.grey)),
-                            Text(_formatearDuracion(duracion),
-                                style: const TextStyle(
-                                    fontSize: 11, color: Colors.grey)),
+                            Text(
+                              _formatearDuracion(posicion),
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            Text(
+                              _formatearDuracion(duracion),
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey,
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 8),
@@ -470,17 +571,21 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
             child: ElevatedButton.icon(
               onPressed: url.isNotEmpty ? () => _toggleAudio(url) : null,
               icon: Icon(estaReproduciendo ? Icons.pause : Icons.play_arrow),
-              label: Text(estaReproduciendo
-                  ? (_idiomaSeleccionado == 'es' ? 'Pausar' : 'Pause')
-                  : (_idiomaSeleccionado == 'es'
-                  ? 'Reproducir audioguía'
-                  : 'Play audio guide')),
+              label: Text(
+                estaReproduciendo
+                    ? (_idiomaSeleccionado == 'es' ? 'Pausar' : 'Pause')
+                    : (_idiomaSeleccionado == 'es'
+                          ? 'Reproducir audioguía'
+                          : 'Play audio guide'),
+              ),
               style: ElevatedButton.styleFrom(
-                backgroundColor:
-                estaReproduciendo ? Colors.blue[700] : Colors.blue,
+                backgroundColor: estaReproduciendo
+                    ? Colors.blue[700]
+                    : Colors.blue,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
+                  borderRadius: BorderRadius.circular(8),
+                ),
                 padding: const EdgeInsets.symmetric(vertical: 12),
               ),
             ),
@@ -496,16 +601,23 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
       children: List.generate(5, (indice) {
         final numeroEstrella = indice + 1;
         final seleccionada = numeroEstrella <= _calificacionSeleccionada;
-        return GestureDetector(
-          onTap: () {
-            setState(() => _calificacionSeleccionada = numeroEstrella);
-          },
-          child: Padding(
-            padding: const EdgeInsets.only(right: 4),
-            child: Icon(
-              seleccionada ? Icons.star : Icons.star_border,
-              color: const Color(0xFF8B4513),
-              size: 32,
+        return Semantics(
+          button: true,
+          label: _idiomaSeleccionado == 'es'
+              ? 'Calificar con $numeroEstrella de 5 estrellas'
+              : 'Rate $numeroEstrella out of 5 stars',
+          selected: seleccionada,
+          child: GestureDetector(
+            onTap: () {
+              setState(() => _calificacionSeleccionada = numeroEstrella);
+            },
+            child: Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: Icon(
+                seleccionada ? Icons.star : Icons.star_border,
+                color: const Color(0xFF8B4513),
+                size: 32,
+              ),
             ),
           ),
         );
@@ -526,7 +638,9 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
             Text(
               esEs ? 'Visitada' : 'Visited',
               style: const TextStyle(
-                  color: Colors.green, fontWeight: FontWeight.bold),
+                color: Colors.green,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ],
         );
@@ -539,7 +653,9 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
               width: 18,
               height: 18,
               child: CircularProgressIndicator(
-                  strokeWidth: 2, color: Colors.grey[400]),
+                strokeWidth: 2,
+                color: Colors.grey[400],
+              ),
             ),
           ),
         );
@@ -554,7 +670,8 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
               backgroundColor: const Color(0xFF8B4513),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
+                borderRadius: BorderRadius.circular(8),
+              ),
               padding: const EdgeInsets.symmetric(vertical: 12),
             ),
           ),
@@ -562,17 +679,22 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
     }
   }
 
-  // TODO: turista_id hardcodeado a 1 (dato de prueba de seed.py) porque
-  // no existe ningún endpoint que resuelva el turista_id del usuario
-  // logueado a partir del token (Turista.id != Usuario.id). Reemplazar
-  // cuando el backend exponga esa relación.
-  static const int _turistaIdTemporal = 1;
+  // El backend no expone ningún endpoint para resolver el turista_id
+  // real (Turista.id) del usuario logueado, así que usamos el "sub" del
+  // JWT (Usuario.id) como sustituto — es mejor que un id fijo compartido
+  // por todos, pero NO es necesariamente el turista_id correcto según el
+  // schema del backend (Turista.id != Usuario.id en general). Este
+  // fallback fijo solo se usa en modo demo local, donde el token no es
+  // un JWT real y no hay id que decodificar.
+  static const int _turistaIdFallbackDemo = 1;
 
   Future<void> _marcarComoVisitada() async {
     setState(() => _estadoVisita = EstadoVisita.enviando);
     try {
+      final usuarioId =
+          await ApiService.obtenerUsuarioId() ?? _turistaIdFallbackDemo;
       await ApiService.registrarVisitaZona(
-        turistaId: _turistaIdTemporal,
+        turistaId: usuarioId,
         zonaId: widget.zona.id,
         idioma: _idiomaSeleccionado,
         metodoAcceso: 'app',
@@ -583,14 +705,19 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
       EstadoVisitasSesion.marcarVisitada(widget.zona.id);
       if (!mounted) return;
       setState(() => _estadoVisita = EstadoVisita.visitada);
+    } on ExcepcionSesionExpirada {
+      if (!mounted) return;
+      await manejarSesionExpirada(context);
     } catch (_) {
       if (!mounted) return;
       setState(() => _estadoVisita = EstadoVisita.noVisitada);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(_idiomaSeleccionado == 'es'
-              ? 'No se pudo registrar la visita. Intenta de nuevo.'
-              : 'Could not register the visit. Please try again.'),
+          content: Text(
+            _idiomaSeleccionado == 'es'
+                ? 'No se pudo registrar la visita. Intenta de nuevo.'
+                : 'Could not register the visit. Please try again.',
+          ),
           backgroundColor: const Color(0xFFDC2626),
           duration: const Duration(seconds: 3),
         ),
