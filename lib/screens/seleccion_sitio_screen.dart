@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../core/banner_modo_demo.dart';
 import '../core/manejo_sesion.dart';
@@ -123,16 +124,20 @@ class _SeleccionSitioScreenState extends State<SeleccionSitioScreen> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          leading: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: PaletaQuriy.esmeraldaClara,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Icon(
-                              Icons.account_balance,
-                              color: PaletaQuriy.esmeraldaOscura,
-                            ),
+                          leading: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: sitio.imagenUrl.isNotEmpty
+                                ? CachedNetworkImage(
+                                    imageUrl: sitio.imagenUrl,
+                                    width: 44,
+                                    height: 44,
+                                    fit: BoxFit.cover,
+                                    placeholder: (_, _) =>
+                                        const _IconoSitioPorDefecto(),
+                                    errorWidget: (_, _, _) =>
+                                        const _IconoSitioPorDefecto(),
+                                  )
+                                : const _IconoSitioPorDefecto(),
                           ),
                           title: Text(
                             sitio.nombre,
@@ -153,6 +158,28 @@ class _SeleccionSitioScreenState extends State<SeleccionSitioScreen> {
                 ),
               ],
             ),
+    );
+  }
+}
+
+/// Placeholder cuando el sitio no tiene `imagen_url` o la foto no cargó.
+class _IconoSitioPorDefecto extends StatelessWidget {
+  const _IconoSitioPorDefecto();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 44,
+      height: 44,
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: PaletaQuriy.esmeraldaClara,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: const Icon(
+        Icons.account_balance,
+        color: PaletaQuriy.esmeraldaOscura,
+      ),
     );
   }
 }

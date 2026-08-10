@@ -4,6 +4,7 @@ class Sitio {
   final String descripcion;
   final String ubicacion;
   final String horario;
+  final String imagenUrl;
 
   Sitio({
     required this.id,
@@ -11,6 +12,7 @@ class Sitio {
     required this.descripcion,
     required this.ubicacion,
     required this.horario,
+    this.imagenUrl = '',
   });
 
   factory Sitio.desdeJson(Map<String, dynamic> json) {
@@ -20,6 +22,7 @@ class Sitio {
       descripcion: _parsearTexto(json['descripcion']),
       ubicacion: _parsearTexto(json['ubicacion']),
       horario: _parsearTexto(json['horario']),
+      imagenUrl: _parsearTexto(json['imagen_url']),
     );
   }
 
