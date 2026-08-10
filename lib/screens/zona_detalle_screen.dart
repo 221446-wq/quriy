@@ -29,6 +29,9 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
   String? _urlAudioActual;
   bool _reproduciendo = false;
 
+  // Calificación de la visita (1-5, 0 = sin seleccionar aún)
+  int _calificacionSeleccionada = 0;
+
   @override
   void initState() {
     super.initState();
@@ -159,6 +162,40 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
                         color: Colors.grey[700], height: 1.5),
                   ),
                 ],
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // ── Tarjeta "Tu visita" (calificación) ─────────
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withOpacity(0.07),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2)),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _idiomaSeleccionado == 'es'
+                      ? 'Califica tu visita'
+                      : 'Rate your visit',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF3E1A00),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _construirSelectorEstrellas(),
               ],
             ),
           ),
@@ -438,6 +475,29 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  // ── Selector de estrellas (1-5) ───────────────────────────────
+  Widget _construirSelectorEstrellas() {
+    return Row(
+      children: List.generate(5, (indice) {
+        final numeroEstrella = indice + 1;
+        final seleccionada = numeroEstrella <= _calificacionSeleccionada;
+        return GestureDetector(
+          onTap: () {
+            setState(() => _calificacionSeleccionada = numeroEstrella);
+          },
+          child: Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: Icon(
+              seleccionada ? Icons.star : Icons.star_border,
+              color: const Color(0xFF8B4513),
+              size: 32,
+            ),
+          ),
+        );
+      }),
     );
   }
 
