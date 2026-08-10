@@ -155,6 +155,46 @@ function ContenidoPage() {
     }
   };
 
+  const cambiarIdioma = async (nuevoIdioma) => {
+    const idiomaAnterior = formulario.idioma;
+
+    // Si el usuario pasa de Español a English y ya hay texto escrito,
+    // traducir automáticamente en vez de solo cambiar el selector.
+    if (
+      nuevoIdioma === "en" &&
+      idiomaAnterior === "es" &&
+      formulario.texto &&
+      formulario.texto.trim()
+    ) {
+      setTraduciendo(true);
+      setError("");
+      try {
+        const respuesta = await clienteHttp.post("/contenido/traducir", {
+          texto: formulario.texto,
+          idioma_origen: "es",
+          idioma_destino: "en",
+        });
+        setFormulario({
+          ...formulario,
+          id: null,
+          idioma: "en",
+          texto: respuesta.data.texto_traducido,
+          archivo: null,
+          urlRecursoExistente: "",
+        });
+      } catch {
+        setError(
+          "No se pudo traducir automáticamente. Cambié el idioma, pero revisa el texto."
+        );
+        setFormulario({ ...formulario, idioma: "en", id: null });
+      } finally {
+        setTraduciendo(false);
+      }
+    } else {
+      setFormulario({ ...formulario, idioma: nuevoIdioma });
+    }
+  };
+
   const traducirAIngles = async () => {
     if (!formulario.texto || !formulario.texto.trim()) {
       setError("Escribe primero el texto en español que quieres traducir.");
@@ -354,7 +394,8 @@ function ContenidoPage() {
               <select
                 style={estilos.input}
                 value={formulario.idioma}
-                onChange={(e) => setFormulario({ ...formulario, idioma: e.target.value })}
+                onChange={(e) => cambiarIdioma(e.target.value)}
+                disabled={traduciendo}
               >
                 {IDIOMAS.map((idioma) => (
                   <option key={idioma.valor} value={idioma.valor}>
@@ -362,6 +403,11 @@ function ContenidoPage() {
                   </option>
                 ))}
               </select>
+              {traduciendo && (
+                <p style={{ fontSize: "12px", color: "#1a6645", margin: "-2px 0 4px" }}>
+                  🌐 Traduciendo automáticamente al inglés...
+                </p>
+              )}
 
               <label style={estilos.label}>Título</label>
               <input
