@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Permite tráfico HTTP en claro SOLO en builds de debug: este archivo vive
+  en android/app/src/debug/, así que Gradle nunca lo empaqueta en release.
+  Es necesario porque en desarrollo el backend corre sin TLS, ya sea en el
+  emulador (10.0.2.2) o en la IP LAN del equipo (ver README.md).
+  No usar cleartext en producción.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
