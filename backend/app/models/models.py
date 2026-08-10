@@ -11,6 +11,8 @@ class Usuario(Base):
     rol = Column(String, default="turista")
     activo = Column(Boolean, default=True)
     creado_en = Column(DateTime, default=datetime.utcnow)
+    proveedor = Column(String, default="local")
+    google_id = Column(String, unique=True, index=True, nullable=True)
 
 class Turista(Base):
     __tablename__ = "turistas"

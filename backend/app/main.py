@@ -2,12 +2,13 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from app.database import engine, Base
+from app.database import engine, Base, migrar_columnas_nuevas
 from app.models import models
 from app.routes import auth, sitios, contenido, recorridos, visitas, estadisticas
 from seed import poblar_base_de_datos
 
 Base.metadata.create_all(bind=engine)
+migrar_columnas_nuevas()
 poblar_base_de_datos()
 
 app = FastAPI(

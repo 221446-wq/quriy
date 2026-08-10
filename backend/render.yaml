@@ -9,3 +9,5 @@ services:
         value: quriy-secret-key-cusco-2024
       - key: DATABASE_URL
         value: sqlite:///./quriy.db
+      - key: GOOGLE_CLIENT_ID
+        sync: false

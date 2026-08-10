@@ -1,5 +1,7 @@
 import os
 
+from app.routes import auth as auth_routes
+
 
 def test_login_exitoso_retorna_jwt(client):
     response = client.post("/auth/login", json={
@@ -20,6 +22,62 @@ def test_login_credenciales_incorrectas_retorna_401(client):
     })
     assert response.status_code == 401
     assert response.json()["detail"] == "Credenciales incorrectas"
+
+
+def test_login_google_token_invalido_retorna_401(client, monkeypatch):
+    monkeypatch.setattr(auth_routes, "verificar_id_token_google", lambda token: None)
+
+    response = client.post("/auth/google", json={"id_token": "token-falso"})
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Token de Google inválido o expirado"
+
+
+def test_login_google_usuario_nuevo_se_crea_automaticamente(client, monkeypatch):
+    monkeypatch.setattr(
+        auth_routes,
+        "verificar_id_token_google",
+        lambda token: {
+            "email": "nueva.persona@gmail.com",
+            "email_verified": True,
+            "sub": "google-uid-123",
+            "name": "Nueva Persona",
+        },
+    )
+
+    response = client.post("/auth/google", json={"id_token": "token-valido"})
+    assert response.status_code == 200
+    data = response.json()
+    assert "access_token" in data
+
+    perfil = client.get(
+        "/auth/me", headers={"Authorization": f"Bearer {data['access_token']}"}
+    )
+    assert perfil.status_code == 200
+    assert perfil.json()["email"] == "nueva.persona@gmail.com"
+    assert perfil.json()["rol"] == "turista"
+
+
+def test_login_google_usuario_existente_se_vincula_por_email(client, monkeypatch):
+    monkeypatch.setattr(
+        auth_routes,
+        "verificar_id_token_google",
+        lambda token: {
+            "email": "turista@quriy.com",
+            "email_verified": True,
+            "sub": "google-uid-456",
+            "name": "Turista Demo",
+        },
+    )
+
+    response = client.post("/auth/google", json={"id_token": "token-valido"})
+    assert response.status_code == 200
+
+    perfil = client.get(
+        "/auth/me",
+        headers={"Authorization": f"Bearer {response.json()['access_token']}"},
+    )
+    assert perfil.json()["email"] == "turista@quriy.com"
 
 
 def test_listar_sitios_retorna_lista(client):
