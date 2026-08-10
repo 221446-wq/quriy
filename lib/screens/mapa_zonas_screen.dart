@@ -58,6 +58,162 @@ class _MapaZonasScreenState extends State<MapaZonasScreen> {
         MaterialPageRoute(builder: (_) => const EscanerQRScreen()));
   }
 
+  /// Arma el cuerpo principal una vez que las zonas cargaron sin error.
+  ///
+  /// Las zonas sin coordenadas nunca se descartan: si al menos una zona
+  /// tiene ubicación se muestran en un panel colapsable bajo el mapa; si
+  /// ninguna la tiene, reemplazan al mapa como lista para no dejar un
+  /// mapa en blanco.
+  Widget _construirCuerpoMapa() {
+    final zonasConCoordenadas =
+        _zonas.where((zona) => zona.tieneCoordenadas).toList();
+    final zonasSinCoordenadas =
+        _zonas.where((zona) => !zona.tieneCoordenadas).toList();
+
+    if (zonasConCoordenadas.isEmpty) {
+      return _construirListaSinMapa(zonasSinCoordenadas);
+    }
+
+    return Column(
+      children: [
+        Expanded(child: _construirMapa(zonasConCoordenadas)),
+        if (zonasSinCoordenadas.isNotEmpty)
+          _construirPanelSinCoordenadas(zonasSinCoordenadas),
+      ],
+    );
+  }
+
+  Widget _construirMapa(List<Zona> zonasConCoordenadas) {
+    return FlutterMap(
+      options: MapOptions(
+        initialCenter: zonasConCoordenadas.isNotEmpty
+            ? LatLng(
+            zonasConCoordenadas[0].latitud!, zonasConCoordenadas[0].longitud!)
+            : _centroMapa,
+        initialZoom: 15,
+      ),
+      children: [
+        TileLayer(
+          urlTemplate:
+          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          userAgentPackageName: 'com.quriy.mobile',
+        ),
+        MarkerLayer(
+          markers: zonasConCoordenadas.map((zona) {
+            return Marker(
+              point: LatLng(zona.latitud!, zona.longitud!),
+              width: 80,
+              height: 80,
+              child: GestureDetector(
+                onTap: () => _navegarADetalle(zona),
+                child: Column(
+                  children: [
+                    const Icon(Icons.location_pin,
+                        color: Color(0xFF8B4513), size: 40),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 4, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(4),
+                        boxShadow: const [
+                          BoxShadow(
+                              color: Colors.black26, blurRadius: 2)
+                        ],
+                      ),
+                      child: Text(
+                        zona.nombre,
+                        style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  /// Panel colapsable bajo el mapa con las zonas que no tienen coordenadas.
+  Widget _construirPanelSinCoordenadas(List<Zona> zonas) {
+    return SafeArea(
+      top: false,
+      child: Container(
+        constraints: const BoxConstraints(maxHeight: 220),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
+        ),
+        child: Theme(
+          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+          child: ExpansionTile(
+            leading: const Icon(Icons.location_off, color: Color(0xFF8B4513)),
+            title: Text('Zonas sin ubicación en el mapa (${zonas.length})'),
+            children: [
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 160),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: zonas.length,
+                  itemBuilder: (_, indice) =>
+                      _construirItemZonaLista(zonas[indice]),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Reemplaza el mapa cuando ninguna zona tiene coordenadas: lista simple
+  /// en vez de un mapa vacío, con las zonas igual de accesibles.
+  Widget _construirListaSinMapa(List<Zona> zonas) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: const [
+              Icon(Icons.map_outlined, color: Colors.grey),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Ninguna zona tiene ubicación registrada todavía. '
+                      'Mostrando la lista de zonas disponibles.',
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: ListView.builder(
+            itemCount: zonas.length,
+            itemBuilder: (_, indice) => _construirItemZonaLista(zonas[indice]),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _construirItemZonaLista(Zona zona) {
+    return ListTile(
+      leading: const Icon(Icons.location_pin, color: Color(0xFF8B4513)),
+      title: Text(zona.nombre),
+      subtitle: zona.descripcion.isNotEmpty
+          ? Text(zona.descripcion,
+          maxLines: 1, overflow: TextOverflow.ellipsis)
+          : null,
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () => _navegarADetalle(zona),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -97,58 +253,7 @@ class _MapaZonasScreenState extends State<MapaZonasScreen> {
           ),
         ),
       )
-          : FlutterMap(
-        options: MapOptions(
-          initialCenter: _zonas.isNotEmpty
-              ? LatLng(_zonas[0].latitud, _zonas[0].longitud)
-              : _centroMapa,
-          initialZoom: 15,
-        ),
-        children: [
-          TileLayer(
-            urlTemplate:
-            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-            userAgentPackageName: 'com.quriy.mobile',
-          ),
-          MarkerLayer(
-            markers: _zonas.map((zona) {
-              return Marker(
-                point: LatLng(zona.latitud, zona.longitud),
-                width: 80,
-                height: 80,
-                child: GestureDetector(
-                  onTap: () => _navegarADetalle(zona),
-                  child: Column(
-                    children: [
-                      const Icon(Icons.location_pin,
-                          color: Color(0xFF8B4513), size: 40),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 4, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(4),
-                          boxShadow: const [
-                            BoxShadow(
-                                color: Colors.black26, blurRadius: 2)
-                          ],
-                        ),
-                        child: Text(
-                          zona.nombre,
-                          style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-        ],
-      ),
+          : _construirCuerpoMapa(),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _abrirEscanerQR,
         backgroundColor: const Color(0xFF8B4513),
