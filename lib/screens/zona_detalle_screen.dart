@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:just_audio/just_audio.dart';
 import '../core/banner_modo_demo.dart';
 import '../core/estado_visitas_sesion.dart';
 import '../core/manejo_sesion.dart';
+import '../core/tema_quriy.dart';
 import '../models/zona.dart';
 import '../models/contenido.dart';
 import '../services/api_service.dart';
@@ -47,6 +49,13 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
   // Estado del botón "Marcar como visitada"
   late EstadoVisita _estadoVisita;
 
+  // Refresca en segundo plano para reflejar cambios que haga el admin
+  // (audios, imágenes, textos nuevos o editados) sin que el turista tenga
+  // que salir y volver a entrar a la zona.
+  Timer? _timerActualizacion;
+  bool _actualizandoEnSegundoPlano = false;
+  static const _intervaloActualizacion = Duration(seconds: 12);
+
   @override
   void initState() {
     super.initState();
@@ -67,6 +76,11 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
         _reproduciendo = estado.playing;
       });
     });
+
+    _timerActualizacion = Timer.periodic(
+      _intervaloActualizacion,
+      (_) => _actualizarContenidoEnSegundoPlano(),
+    );
   }
 
   Future<void> _cargarContenido() async {
@@ -86,6 +100,32 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
     }
   }
 
+  /// Igual que [_cargarContenido] pero sin tocar el indicador de carga: si
+  /// falla (backend caído, sin red) se descarta el intento y se reintenta
+  /// en el próximo ciclo, sin interrumpir el audio que esté sonando ni
+  /// mostrar un spinner de pantalla completa.
+  Future<void> _actualizarContenidoEnSegundoPlano() async {
+    if (_cargando || _actualizandoEnSegundoPlano) return;
+    _actualizandoEnSegundoPlano = true;
+    try {
+      final respuesta = await ApiService.obtenerContenidoDeZona(widget.zona.id);
+      if (!mounted) return;
+      setState(() {
+        _contenido = respuesta.datos
+            .map((json) => Contenido.desdeJson(json as Map<String, dynamic>))
+            .toList();
+        _esModoDemo = respuesta.esDatosLocales;
+      });
+    } on ExcepcionSesionExpirada {
+      if (!mounted) return;
+      await manejarSesionExpirada(context);
+    } catch (_) {
+      // Silencioso a propósito: es un refresco de fondo.
+    } finally {
+      _actualizandoEnSegundoPlano = false;
+    }
+  }
+
   List<Contenido> get _contenidoFiltrado =>
       _contenido.where((c) => c.idioma == _idiomaSeleccionado).toList();
 
@@ -98,20 +138,37 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
       .toSet();
 
   Future<void> _toggleAudio(String url) async {
-    if (_urlAudioActual == url && _reproduciendo) {
-      await _audioPlayer.pause();
-    } else if (_urlAudioActual == url && !_reproduciendo) {
-      await _audioPlayer.play();
-    } else {
-      await _audioPlayer.stop();
-      await _audioPlayer.setUrl(url);
-      setState(() => _urlAudioActual = url);
-      await _audioPlayer.play();
+    try {
+      if (_urlAudioActual == url && _reproduciendo) {
+        await _audioPlayer.pause();
+      } else if (_urlAudioActual == url && !_reproduciendo) {
+        await _audioPlayer.play();
+      } else {
+        await _audioPlayer.stop();
+        await _audioPlayer.setUrl(url);
+        setState(() => _urlAudioActual = url);
+        await _audioPlayer.play();
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _urlAudioActual = null);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _idiomaSeleccionado == 'es'
+                ? 'No se pudo reproducir el audio. Intenta de nuevo.'
+                : 'Could not play the audio. Please try again.',
+          ),
+          backgroundColor: const Color(0xFFDC2626),
+          duration: const Duration(seconds: 3),
+        ),
+      );
     }
   }
 
   @override
   void dispose() {
+    _timerActualizacion?.cancel();
     _audioPlayer.dispose();
     super.dispose();
   }
@@ -119,17 +176,15 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F0EB),
+      backgroundColor: PaletaQuriy.fondoGeneral,
       appBar: AppBar(
         title: Text(widget.zona.nombre),
-        backgroundColor: const Color(0xFF8B4513),
-        foregroundColor: Colors.white,
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: DropdownButton<String>(
               value: _idiomaSeleccionado,
-              dropdownColor: const Color(0xFF8B4513),
+              dropdownColor: PaletaQuriy.esmeraldaOscura,
               style: const TextStyle(color: Colors.white, fontSize: 14),
               underline: const SizedBox(),
               items: const [
@@ -179,7 +234,7 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
                               children: [
                                 const Icon(
                                   Icons.location_on,
-                                  color: Color(0xFF8B4513),
+                                  color: PaletaQuriy.esmeraldaPrincipal,
                                 ),
                                 const SizedBox(width: 8),
                                 Expanded(
@@ -188,7 +243,7 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
                                     style: const TextStyle(
                                       fontSize: 20,
                                       fontWeight: FontWeight.bold,
-                                      color: Color(0xFF3E1A00),
+                                      color: PaletaQuriy.textoPrincipal,
                                     ),
                                   ),
                                 ),
@@ -234,7 +289,7 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
                               style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF3E1A00),
+                                color: PaletaQuriy.textoPrincipal,
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -255,7 +310,7 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF3E1A00),
+                          color: PaletaQuriy.textoPrincipal,
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -615,7 +670,7 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
               padding: const EdgeInsets.only(right: 4),
               child: Icon(
                 seleccionada ? Icons.star : Icons.star_border,
-                color: const Color(0xFF8B4513),
+                color: PaletaQuriy.doradoAccento,
                 size: 32,
               ),
             ),
@@ -667,7 +722,7 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
             icon: const Icon(Icons.check),
             label: Text(esEs ? 'Marcar como visitada' : 'Mark as visited'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF8B4513),
+              backgroundColor: PaletaQuriy.esmeraldaPrincipal,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),

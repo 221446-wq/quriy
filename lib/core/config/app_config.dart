@@ -9,7 +9,7 @@ class AppConfig {
 
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://quriy.onrender.com',
+    defaultValue: 'https://quriy.onrender.com',
   );
 
   /// Falla rápido y con un mensaje claro si alguien define

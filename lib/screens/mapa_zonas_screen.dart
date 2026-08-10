@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../core/banner_modo_demo.dart';
 import '../core/estado_visitas_sesion.dart';
 import '../core/manejo_sesion.dart';
+import '../core/tema_quriy.dart';
 import '../models/zona.dart';
 import '../services/api_service.dart';
 import 'zona_detalle_screen.dart';
@@ -23,12 +25,59 @@ class _MapaZonasScreenState extends State<MapaZonasScreen> {
   bool _esModoDemo = false;
   String? _mensajeError;
 
+  // Refresca en segundo plano para reflejar cambios que haga el admin
+  // (coordenadas, nombres, zonas nuevas) sin que el turista tenga que
+  // salir y volver a entrar a la pantalla.
+  Timer? _timerActualizacion;
+  bool _actualizandoEnSegundoPlano = false;
+  static const _intervaloActualizacion = Duration(seconds: 12);
+
   static const _centroMapa = LatLng(-13.5319, -71.9675); // Cusco
 
   @override
   void initState() {
     super.initState();
     _cargarZonas();
+    _timerActualizacion = Timer.periodic(
+      _intervaloActualizacion,
+      (_) => _actualizarZonasEnSegundoPlano(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _timerActualizacion?.cancel();
+    super.dispose();
+  }
+
+  /// Igual que [_cargarZonas] pero sin tocar los indicadores de carga ni
+  /// de error: si falla (backend caído, sin red) simplemente se descarta
+  /// el intento y se reintenta en el próximo ciclo, sin interrumpir lo que
+  /// el turista esté viendo.
+  Future<void> _actualizarZonasEnSegundoPlano() async {
+    if (_cargando || _actualizandoEnSegundoPlano) return;
+    _actualizandoEnSegundoPlano = true;
+    try {
+      final respuesta = await ApiService.obtenerZonasDeSitio(widget.sitioId);
+      if (!mounted) return;
+      if (respuesta.datos.isEmpty) return;
+      final zonasActualizadas = respuesta.datos
+          .map((j) => Zona.desdeJson(j))
+          .toList();
+      setState(() {
+        _zonas = zonasActualizadas;
+        _esModoDemo = respuesta.esDatosLocales;
+        _mensajeError = null;
+      });
+    } on ExcepcionSesionExpirada {
+      if (!mounted) return;
+      await manejarSesionExpirada(context);
+    } catch (_) {
+      // Silencioso a propósito: es un refresco de fondo, no una acción
+      // que el usuario haya pedido.
+    } finally {
+      _actualizandoEnSegundoPlano = false;
+    }
   }
 
   Future<void> _cargarZonas() async {
@@ -102,7 +151,69 @@ class _MapaZonasScreenState extends State<MapaZonasScreen> {
     );
   }
 
+  /// Agrupa zonas que comparten prácticamente la misma coordenada (~1m de
+  /// precisión). Varias zonas de un mismo sitio a veces se registran todas
+  /// con el mismo punto GPS — sin agrupar, sus marcadores quedarían
+  /// perfectamente apilados y solo la última sería visible/tocable.
+  List<List<Zona>> _agruparPorCoordenada(List<Zona> zonasConCoordenadas) {
+    final grupos = <String, List<Zona>>{};
+    for (final zona in zonasConCoordenadas) {
+      final clave =
+          '${zona.latitud!.toStringAsFixed(5)},${zona.longitud!.toStringAsFixed(5)}';
+      grupos.putIfAbsent(clave, () => []).add(zona);
+    }
+    return grupos.values.toList();
+  }
+
+  void _mostrarSelectorDeZonas(List<Zona> grupo) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.location_on,
+                      color: PaletaQuriy.esmeraldaPrincipal,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${grupo.length} zonas en este punto',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: grupo.length,
+                  itemBuilder: (_, indice) {
+                    return _construirItemZonaLista(grupo[indice], cerrarHoja: true);
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _construirMapa(List<Zona> zonasConCoordenadas) {
+    final grupos = _agruparPorCoordenada(zonasConCoordenadas);
+
     return FlutterMap(
       options: MapOptions(
         initialCenter: zonasConCoordenadas.isNotEmpty
@@ -119,25 +230,70 @@ class _MapaZonasScreenState extends State<MapaZonasScreen> {
           userAgentPackageName: 'com.quriy.mobile',
         ),
         MarkerLayer(
-          markers: zonasConCoordenadas.map((zona) {
-            final visitada = EstadoVisitasSesion.estaVisitada(zona.id);
+          markers: grupos.map((grupo) {
+            final zona = grupo.first;
+            final esGrupo = grupo.length > 1;
+            final todasVisitadas = grupo.every(
+              (z) => EstadoVisitasSesion.estaVisitada(z.id),
+            );
+            final etiqueta = esGrupo ? '${grupo.length} zonas' : zona.nombre;
+
             return Marker(
               point: LatLng(zona.latitud!, zona.longitud!),
-              width: 80,
+              width: 90,
               height: 80,
               child: Semantics(
                 button: true,
-                label: visitada ? '${zona.nombre} (visitada)' : zona.nombre,
+                label: esGrupo
+                    ? '${grupo.length} zonas en este punto'
+                    : (todasVisitadas ? '${zona.nombre} (visitada)' : zona.nombre),
                 child: GestureDetector(
-                  onTap: () => _navegarADetalle(zona),
+                  onTap: () => esGrupo
+                      ? _mostrarSelectorDeZonas(grupo)
+                      : _navegarADetalle(zona),
                   child: Column(
                     children: [
-                      Icon(
-                        visitada ? Icons.check_circle : Icons.location_pin,
-                        color: visitada
-                            ? Colors.green
-                            : const Color(0xFF8B4513),
-                        size: 40,
+                      Stack(
+                        clipBehavior: Clip.none,
+                        alignment: Alignment.center,
+                        children: [
+                          Icon(
+                            todasVisitadas
+                                ? Icons.check_circle
+                                : Icons.flag_circle,
+                            color: todasVisitadas
+                                ? PaletaQuriy.esmeraldaPrincipal
+                                : PaletaQuriy.azulMarino,
+                            size: 40,
+                          ),
+                          if (esGrupo)
+                            Positioned(
+                              top: -2,
+                              right: -2,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 5,
+                                  vertical: 1,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: PaletaQuriy.esmeraldaOscura,
+                                  borderRadius: BorderRadius.circular(99),
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: Text(
+                                  '${grupo.length}',
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -152,7 +308,7 @@ class _MapaZonasScreenState extends State<MapaZonasScreen> {
                           ],
                         ),
                         child: Text(
-                          zona.nombre,
+                          etiqueta,
                           style: const TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
@@ -166,6 +322,11 @@ class _MapaZonasScreenState extends State<MapaZonasScreen> {
               ),
             );
           }).toList(),
+        ),
+        const RichAttributionWidget(
+          attributions: [
+            TextSourceAttribution('OpenStreetMap contributors'),
+          ],
         ),
       ],
     );
@@ -184,7 +345,10 @@ class _MapaZonasScreenState extends State<MapaZonasScreen> {
         child: Theme(
           data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
           child: ExpansionTile(
-            leading: const Icon(Icons.location_off, color: Color(0xFF8B4513)),
+            leading: const Icon(
+              Icons.location_off,
+              color: PaletaQuriy.azulMarino,
+            ),
             title: Text('Zonas sin ubicación en el mapa (${zonas.length})'),
             children: [
               ConstrainedBox(
@@ -237,19 +401,24 @@ class _MapaZonasScreenState extends State<MapaZonasScreen> {
     );
   }
 
-  Widget _construirItemZonaLista(Zona zona) {
+  Widget _construirItemZonaLista(Zona zona, {bool cerrarHoja = false}) {
     final visitada = EstadoVisitasSesion.estaVisitada(zona.id);
     return ListTile(
       leading: Icon(
-        visitada ? Icons.check_circle : Icons.location_pin,
-        color: visitada ? Colors.green : const Color(0xFF8B4513),
+        visitada ? Icons.check_circle : Icons.flag_circle,
+        color: visitada
+            ? PaletaQuriy.esmeraldaPrincipal
+            : PaletaQuriy.azulMarino,
       ),
       title: Text(zona.nombre),
       subtitle: zona.descripcion.isNotEmpty
           ? Text(zona.descripcion, maxLines: 1, overflow: TextOverflow.ellipsis)
           : null,
       trailing: const Icon(Icons.chevron_right),
-      onTap: () => _navegarADetalle(zona),
+      onTap: () {
+        if (cerrarHoja) Navigator.pop(context);
+        _navegarADetalle(zona);
+      },
     );
   }
 
@@ -258,8 +427,6 @@ class _MapaZonasScreenState extends State<MapaZonasScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mapa de Zonas'),
-        backgroundColor: const Color(0xFF8B4513),
-        foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -308,7 +475,7 @@ class _MapaZonasScreenState extends State<MapaZonasScreen> {
             ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _abrirEscanerQR,
-        backgroundColor: const Color(0xFF8B4513),
+        backgroundColor: PaletaQuriy.esmeraldaPrincipal,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.qr_code_scanner),
         label: const Text('Escanear QR'),
