@@ -26,10 +26,12 @@ class _EscanerQRScreenState extends State<EscanerQRScreen> {
 
     setState(() => _procesando = true);
 
-    final zonaId = _extraerIdDeZona(codigoRaw);
     final traducciones = context.read<ProveedorDeIdioma>().traducciones;
 
-    if (zonaId == null) {
+    final int zonaId;
+    try {
+      zonaId = ApiService().extraerIdDeZonaDesdeQR(codigoRaw);
+    } on ExcepcionCodigoQRInvalido {
       if (!mounted) return;
       _mostrarMensajeError(traducciones.errorQRInvalido);
       setState(() => _procesando = false);
@@ -73,17 +75,6 @@ class _EscanerQRScreenState extends State<EscanerQRScreen> {
     } on ExcepcionSesionExpirada {
       if (!mounted) return;
       await manejarSesionExpirada(context);
-    }
-  }
-
-  int? _extraerIdDeZona(String codigoQR) {
-    try {
-      if (codigoQR.startsWith('zona:')) {
-        return int.parse(codigoQR.split(':')[1]);
-      }
-      return int.tryParse(codigoQR);
-    } catch (_) {
-      return null;
     }
   }
 

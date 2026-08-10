@@ -526,6 +526,25 @@ void main() {
     });
 
     test(
+      'extrae el ID desde la URL de destino real que genera el backend',
+      () {
+        expect(
+          servicio.extraerIdDeZonaDesdeQR('https://quriy.app/zonas/5'),
+          equals(5),
+        );
+      },
+    );
+
+    test('extrae el ID desde una URL de destino con otro dominio', () {
+      expect(
+        servicio.extraerIdDeZonaDesdeQR(
+          'https://quriy.onrender.com/zonas/12',
+        ),
+        equals(12),
+      );
+    });
+
+    test(
       'lanza ExcepcionCodigoQRInvalido cuando el QR tiene texto no numérico',
       () {
         expect(

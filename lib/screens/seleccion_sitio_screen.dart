@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/banner_modo_demo.dart';
 import '../core/manejo_sesion.dart';
+import '../core/tema_quriy.dart';
 import '../models/sitio.dart';
 import '../services/api_service.dart';
 import 'mapa_zonas_screen.dart';
@@ -65,8 +66,6 @@ class _SeleccionSitioScreenState extends State<SeleccionSitioScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Elige un sitio'),
-        backgroundColor: const Color(0xFF8B4513),
-        foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -113,10 +112,27 @@ class _SeleccionSitioScreenState extends State<SeleccionSitioScreen> {
                       final sitio = _sitios[indice];
                       return Card(
                         margin: const EdgeInsets.only(bottom: 12),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: const BorderSide(
+                            color: PaletaQuriy.bordeGeneral,
+                          ),
+                        ),
                         child: ListTile(
-                          leading: const Icon(
-                            Icons.account_balance,
-                            color: Color(0xFF8B4513),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          leading: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: PaletaQuriy.esmeraldaClara,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.account_balance,
+                              color: PaletaQuriy.esmeraldaOscura,
+                            ),
                           ),
                           title: Text(
                             sitio.nombre,
@@ -125,7 +141,10 @@ class _SeleccionSitioScreenState extends State<SeleccionSitioScreen> {
                           subtitle: sitio.ubicacion.isNotEmpty
                               ? Text(sitio.ubicacion)
                               : null,
-                          trailing: const Icon(Icons.chevron_right),
+                          trailing: const Icon(
+                            Icons.chevron_right,
+                            color: PaletaQuriy.textoSutil,
+                          ),
                           onTap: () => _navegarAMapaDeZonas(sitio),
                         ),
                       );

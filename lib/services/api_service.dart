@@ -444,7 +444,11 @@ class ApiService {
 
   /// Extrae el ID de zona desde un código QR escaneado.
   ///
-  /// Formatos válidos: "zona:5" o simplemente "5".
+  /// Formatos válidos: "zona:5", simplemente "5", o la URL de destino que
+  /// genera el backend real (`CodigoQR.url_destino`, ej.
+  /// "https://quriy.app/zonas/5" o "https://quriy.onrender.com/zonas/5") —
+  /// cualquier dominio sirve, solo importa que el path termine en
+  /// `zona(s)/<id>`.
   /// Lanza [ExcepcionCodigoQRInvalido] si el formato no es reconocido.
   int extraerIdDeZonaDesdeQR(String codigoQR) {
     final codigoLimpio = codigoQR.trim();
@@ -458,6 +462,18 @@ class ApiService {
 
     final idDirecto = int.tryParse(codigoLimpio);
     if (idDirecto != null && idDirecto > 0) return idDirecto;
+
+    final uri = Uri.tryParse(codigoLimpio);
+    if (uri != null) {
+      final segmentos = uri.pathSegments;
+      final indice = segmentos.indexWhere(
+        (s) => s == 'zona' || s == 'zonas',
+      );
+      if (indice != -1 && indice + 1 < segmentos.length) {
+        final idDesdeUrl = int.tryParse(segmentos[indice + 1]);
+        if (idDesdeUrl != null && idDesdeUrl > 0) return idDesdeUrl;
+      }
+    }
 
     throw ExcepcionCodigoQRInvalido(codigoQR);
   }

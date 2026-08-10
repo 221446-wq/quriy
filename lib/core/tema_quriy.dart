@@ -8,6 +8,7 @@ abstract class PaletaQuriy {
   static const Color esmeraldaMedio = Color(0xFF059669);
   static const Color esmeraldaClara = Color(0xFFD1FAE5);
   static const Color doradoAccento = Color(0xFFD97706);
+  static const Color azulMarino = Color(0xFF1E3A5F);
   static const Color doradoClaro = Color(0xFFFEF3C7);
   static const Color fondoGeneral = Color(0xFFF9FAFB);
   static const Color superficieBlanca = Color(0xFFFFFFFF);
