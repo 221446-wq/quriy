@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../core/tema_quriy.dart';
 import '../core/proveedor_idioma.dart';
 import '../models/zona.dart';
+import '../models/contenido.dart';
 import '../services/api_service.dart';
 import 'zona_detalle_screen.dart';
 
@@ -60,7 +61,9 @@ class _EscanerQRScreenState extends State<EscanerQRScreen> {
       MaterialPageRoute(
         builder: (_) => ZonaDetalleScreen(
           zona: zonaEscaneada,
-          contenidoInicial: contenidoDeZona,
+          contenidoInicial: contenidoDeZona
+              .map((json) => Contenido.desdeJson(json as Map<String, dynamic>))
+              .toList(),
         ),
       ),
     );

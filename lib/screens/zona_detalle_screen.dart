@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:just_audio/just_audio.dart';
 import '../models/zona.dart';
+import '../models/contenido.dart';
 import '../services/api_service.dart';
 
 class ZonaDetalleScreen extends StatefulWidget {
   final Zona zona;
-  final List<dynamic>? contenidoInicial;
+  final List<Contenido>? contenidoInicial;
 
   const ZonaDetalleScreen({
     super.key,
@@ -19,7 +20,7 @@ class ZonaDetalleScreen extends StatefulWidget {
 }
 
 class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
-  List<dynamic> _contenido = [];
+  List<Contenido> _contenido = [];
   bool _cargando = true;
   String _idiomaSeleccionado = 'es';
 
@@ -50,13 +51,15 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
     final datos = await ApiService.obtenerContenidoDeZona(widget.zona.id);
     if (!mounted) return;
     setState(() {
-      _contenido = datos;
+      _contenido = datos
+          .map((json) => Contenido.desdeJson(json as Map<String, dynamic>))
+          .toList();
       _cargando = false;
     });
   }
 
-  List<dynamic> get _contenidoFiltrado =>
-      _contenido.where((c) => c['idioma'] == _idiomaSeleccionado).toList();
+  List<Contenido> get _contenidoFiltrado =>
+      _contenido.where((c) => c.idioma == _idiomaSeleccionado).toList();
 
   Future<void> _toggleAudio(String url) async {
     if (_urlAudioActual == url && _reproduciendo) {
@@ -197,8 +200,8 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
     );
   }
 
-  Widget _construirTarjeta(Map<String, dynamic> contenido) {
-    final tipo = contenido['tipo'] ?? 'texto';
+  Widget _construirTarjeta(Contenido contenido) {
+    final tipo = contenido.tipo;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -221,7 +224,7 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
   }
 
   // ── Tarjeta TEXTO ────────────────────────────────────────────
-  Widget _tarjetaTexto(Map<String, dynamic> c) {
+  Widget _tarjetaTexto(Contenido c) {
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -240,17 +243,17 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  c['titulo'] ?? 'Información',
+                  c.titulo.isNotEmpty ? c.titulo : 'Información',
                   style: const TextStyle(
                       fontWeight: FontWeight.bold, fontSize: 15),
                 ),
               ),
             ],
           ),
-          if ((c['descripcion'] ?? '').isNotEmpty) ...[
+          if (c.descripcion.isNotEmpty) ...[
             const SizedBox(height: 12),
             Text(
-              c['descripcion'],
+              c.descripcion,
               style: TextStyle(color: Colors.grey[700], height: 1.5),
             ),
           ],
@@ -260,8 +263,8 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
   }
 
   // ── Tarjeta IMAGEN ───────────────────────────────────────────
-  Widget _tarjetaImagen(Map<String, dynamic> c) {
-    final url = c['url_recurso'] ?? '';
+  Widget _tarjetaImagen(Contenido c) {
+    final url = c.urlRecurso;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -310,15 +313,15 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
                   ),
                   const SizedBox(width: 10),
                   Text(
-                    c['titulo'] ?? 'Imagen',
+                    c.titulo.isNotEmpty ? c.titulo : 'Imagen',
                     style: const TextStyle(
                         fontWeight: FontWeight.bold, fontSize: 15),
                   ),
                 ],
               ),
-              if ((c['descripcion'] ?? '').isNotEmpty) ...[
+              if (c.descripcion.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                Text(c['descripcion'],
+                Text(c.descripcion,
                     style: TextStyle(color: Colors.grey[600], fontSize: 13)),
               ],
             ],
@@ -329,8 +332,8 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
   }
 
   // ── Tarjeta AUDIO ────────────────────────────────────────────
-  Widget _tarjetaAudio(Map<String, dynamic> c) {
-    final url = c['url_recurso'] ?? '';
+  Widget _tarjetaAudio(Contenido c) {
+    final url = c.urlRecurso;
     final esEsteAudio = _urlAudioActual == url;
     final estaReproduciendo = esEsteAudio && _reproduciendo;
 
@@ -355,12 +358,12 @@ class _ZonaDetalleScreenState extends State<ZonaDetalleScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      c['titulo'] ?? 'Audioguía',
+                      c.titulo.isNotEmpty ? c.titulo : 'Audioguía',
                       style: const TextStyle(
                           fontWeight: FontWeight.bold, fontSize: 15),
                     ),
-                    if ((c['descripcion'] ?? '').isNotEmpty)
-                      Text(c['descripcion'],
+                    if (c.descripcion.isNotEmpty)
+                      Text(c.descripcion,
                           style: TextStyle(
                               color: Colors.grey[600], fontSize: 12)),
                   ],
