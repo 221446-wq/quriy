@@ -4,7 +4,7 @@ import 'core/config/app_config.dart';
 import 'core/tema_quriy.dart';
 import 'core/proveedor_idioma.dart';
 import 'screens/login_screen.dart';
-
+// funcional
 void main() {
   AppConfig.validar();
   runApp(
