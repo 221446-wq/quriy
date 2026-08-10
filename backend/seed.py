@@ -21,10 +21,10 @@ Base.metadata.create_all(bind=engine)
 # ============================================================
 IMAGENES_SITIOS = {
     "Qorikancha - Templo del Sol": "https://res.cloudinary.com/m3uozpsd/image/upload/v1786349433/quriy/dhcz2mlakxe1qqcek4s7.jpg",
-    "Plaza de Armas del Cusco": "",
-    "Piedra de los 12 Angulos": "",
-    "Qenqo": "",
-    "Cristo Blanco": "",
+    "Plaza de Armas del Cusco": "https://res.cloudinary.com/m3uozpsd/image/upload/v1786393480/quriy/ym53bkikhuzxkd7qnjvv.jpg",
+    "Piedra de los 12 Angulos": "https://res.cloudinary.com/m3uozpsd/image/upload/v1786393582/quriy/mnxx33jcnvpagaeqnvgn.jpg",
+    "Qenqo": "https://res.cloudinary.com/m3uozpsd/image/upload/v1786393625/quriy/bsjgrtciqtcbhokzqoqr.jpg",
+    "Cristo Blanco": "https://res.cloudinary.com/m3uozpsd/image/upload/v1786393697/quriy/n05snc2vocwhomaxv9wl.jpg",
 }
 
 
